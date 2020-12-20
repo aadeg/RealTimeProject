@@ -2,8 +2,6 @@
 #include "utils.h"
 
 #include <stdio.h>
-#include <math.h>
-
 #include "consts.h"
 
 #define CHAR_SPACING 8
@@ -27,28 +25,16 @@ void blit_status_box(BITMAP* status_box) {
 		STATUS_BOX_WIDTH, STATUS_BOX_HEIGHT);
 }
 
-void update_status_box(BITMAP* status_box, int counter) {
-	char str[100] = { 0 };
-
-	textout_ex(status_box, font, str,
-			STATUS_BOX_PADDING, STATUS_BOX_PADDING, BG_COLOR, BG_COLOR);
-	sprintf(str, "Messaggio di prova %d", counter);
-	textout_ex(status_box, font, str,
-			STATUS_BOX_PADDING, STATUS_BOX_PADDING, MAIN_COLOR, BG_COLOR);
-}
-
-// ==================================================================
-//                        AIRPLANE GRAPHIC
-// ==================================================================
 void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 		int color) {
+	float sqrt_3 = sqrt(3.0);
 	float sin_angle = sinf(angle);
 	float cos_angle = cosf(angle);
-	float x1 = SQRT_3 * radius / 2.0 + xc;
+	float x1 = sqrt_3 * radius / 2.0 + xc;
 	float y1 = ((float) radius) / 2.0 + yc;
 	float x2 = xc;
 	float y2 = yc - radius;
-	float x3 =  -SQRT_3 * radius / 2.0 + xc;
+	float x3 =  -sqrt_3 * radius / 2.0 + xc;
 	float y3 = y1;
 	rotate_point(&x1, &y1, xc, yc, cos_angle, sin_angle);
 	rotate_point(&x2, &y2, xc, yc, cos_angle, sin_angle);
@@ -58,65 +44,6 @@ void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 			roundf(x2), roundf(y2),
 			roundf(x3), roundf(y3), color);
 
-}
-
-void rotate_point(float* x, float* y, float xc, float yc, 
-		float cos_angle, float sin_angle) {
-	float tmp_x;
-	*x -= xc;
-	*y -= yc;
-	tmp_x = *x;
-
-	*x = cos_angle * tmp_x + sin_angle * (*y);
-	*y = -sin_angle * tmp_x + cos_angle * (*y);
-	
-	*x += xc;
-	*y += yc;
-}
-
-void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
-	*dst_x = src_x + SCREEN_HEIGHT/2.0;
-	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
-}
-
-void draw_airplane(const airplane_t* airplane, int color) {
-	int x = 0;
-	int y = 0;
-	float angle = (airplane->angle - M_PI_2);
-	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
-	draw_triangle(screen, x, y, AIRPLANE_SIZE, angle, color);
-}
-
-void draw_point(const waypoint_t* point, int color) {
-	int x = 0;
-	int y = 0;
-	convert_coord_to_display(point->x, point->y, &x, &y);
-	circlefill(screen, x, y, 2, color);
-}
-
-
-void draw_trail(const cbuffer_t* trails, int n, int color) {
-	int i = 0;
-	int idx = 0;
-	
-	if (n > TRAIL_BUFFER_LENGTH) n = TRAIL_BUFFER_LENGTH;
-	
-	for (i = 0; i < n; ++i) {
-		idx = (trails->top + TRAIL_BUFFER_LENGTH - i) % TRAIL_BUFFER_LENGTH;
-		putpixel(screen, trails->points[idx].x, trails->points[idx].y, color);
-	}
-}
-
-void handle_airplane_trail(const airplane_t* airplane, cbuffer_t* trail) {
-	point2i_t new_point;
-	int i = 0;
-	convert_coord_to_display(airplane->x, airplane->y,
-		&new_point.x, &new_point.y);
-	
-	i = cbuffer_next_index(trail);
-	putpixel(screen, trail->points[i].x, trail->points[i].y, BG_COLOR);
-	trail->points[i] = new_point;
-	draw_trail(trail, TRAIL_BUFFER_LENGTH, 5);
 }
 
 // ==================================================================

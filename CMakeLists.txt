@@ -69,6 +69,18 @@ target_link_libraries(prototype_waypoints
 	m
 )
 
+add_executable(main
+  src/ptask.c
+  src/graphics.c
+  src/main.c
+)
+target_link_libraries(main
+	pthread
+	rt
+	alleg
+	m
+)
+
 # add_executable(allegro_mouse
 # 	src/allegro_mouse.c
 # 	src/ptask.c

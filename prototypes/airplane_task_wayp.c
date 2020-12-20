@@ -18,7 +18,8 @@
 #define STATUS_BOX_Y			10
 #define STATUS_BOX_PADDING 		5
 #define AIRPLANE_SIZE			10
-#define MAX_AIRPLANE			3
+#define MAX_AIRPLANE			10
+#define TRAIL_BUFFER_LENGTH		100
 
 #define MAX_WAYPOINTS 			50
 #define TRAJECTORY_POINTS 		30
@@ -58,6 +59,17 @@ typedef struct {
 	pthread_mutex_t mutex;
 } shared_airplane_t;
 
+// 2D Point with Interger coordinates
+typedef struct {
+	int x;
+	int y;
+} point2i_t;
+
+typedef struct  {
+	point2i_t points[TRAIL_BUFFER_LENGTH];
+	int top;
+} cbuffer_t;
+
 const waypoint_t* trajectory_get(const trajectory_t* trajectory, int index) {
 	if (trajectory == NULL) return NULL;
 	if (index >= 0 && index < trajectory->size) {
@@ -74,25 +86,9 @@ const waypoint_t* trajectory_get(const trajectory_t* trajectory, int index) {
 // GLOBAL VARIABLES
 trajectory_t trajectory;
 shared_airplane_t airplanes[MAX_AIRPLANE];
+int n_airplanes = 0;
 bool end = false;
-
-/*
-void init_trajectory() {
-	int i = 0;
-	float s = 0;
-	waypoint_t* point;
-
-	trajectory.size = TRAJECTORY_POINTS;
-	trajectory.is_cyclic = true;
-	for (i = 0; i < TRAJECTORY_POINTS; ++i) {
-		point = &trajectory.waypoints[i];
-		point->x = TRAJECTORY_RADIUS * cosf(s);
-		point->y = TRAJECTORY_RADIUS * sinf(s);
-		point->angle = s + M_PI;
-		s += TRAJECTORY_STEP;
-	}
-}
-*/
+struct task_info airplane_task_infos[MAX_AIRPLANE];
 
 void init_trajectory() {
 	int i = 0;
@@ -121,6 +117,7 @@ void init() {
 	clear_to_color(screen, BG_COLOR);
 
 	init_trajectory();
+	/*
 	pthread_mutex_init(&airplanes[0].mutex, NULL);
 	pthread_mutex_init(&airplanes[1].mutex, NULL);
 	pthread_mutex_init(&airplanes[2].mutex, NULL);
@@ -145,6 +142,7 @@ void init() {
 		.des_traj = &trajectory,
 		.traj_index = 10
 	};
+	*/
 }
 
 BITMAP* create_status_box() {
@@ -191,17 +189,6 @@ void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 			roundf(x2), roundf(y2),
 			roundf(x3), roundf(y3), color);
 
-}
-
-float points_distance(float x1, float y1, float x2, float y2) {
-	float dx = x1 - x2;
-	float dy = y1 - y2;
-	return sqrtf(dx*dx + dy*dy);
-}
-
-float wrap_angle_pi(float angle) {
-	int k = ceilf(-angle / (2.0 * M_PI) - 0.5);
-	return angle + 2.0 * M_PI * k;
 }
 
 void* airplane_task(void* arg) {
@@ -259,47 +246,90 @@ void* airplane_task(void* arg) {
 	return NULL;
 }
 
+void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
+	*dst_x = src_x + SCREEN_HEIGHT/2.0;
+	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
+}
+
 void draw_airplane(const airplane_t* airplane, int color) {
-	int x = airplane->x + SCREEN_HEIGHT/2.0;
-	int y = -airplane->y + SCREEN_HEIGHT/2.0;
+	int x = 0;
+	int y = 0;
 	float angle = (airplane->angle - M_PI_2);
+	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
 	draw_triangle(screen, x, y, AIRPLANE_SIZE, angle, color);
 }
 
 void draw_point(const waypoint_t* point, int color) {
-	int x = point->x + SCREEN_HEIGHT/2.0;
-	int y = -point->y + SCREEN_HEIGHT/2.0;
+	int x = 0;
+	int y = 0;
+	convert_coord_to_display(point->x, point->y, &x, &y);
 	circlefill(screen, x, y, 2, color);
+}
+
+int cbuffer_next_index(cbuffer_t* buffer) {
+	int index = (buffer->top + 1) % TRAIL_BUFFER_LENGTH;
+	++buffer->top;
+	return index;
+}
+
+void draw_trail(const cbuffer_t* trails, int n, int color) {
+	int i = 0;
+	int idx = 0;
+	
+	if (n > TRAIL_BUFFER_LENGTH) n = TRAIL_BUFFER_LENGTH;
+	
+	for (i = 0; i < n; ++i) {
+		idx = (trails->top + TRAIL_BUFFER_LENGTH - i) % TRAIL_BUFFER_LENGTH;
+		putpixel(screen, trails->points[idx].x, trails->points[idx].y, color);
+	}
+}
+
+void handle_airplane_trail(const airplane_t* airplane,  cbuffer_t* trail) {
+	point2i_t new_point;
+	int i = 0;
+	convert_coord_to_display(airplane->x, airplane->y,
+		&new_point.x, &new_point.y);
+	
+	i = cbuffer_next_index(trail);
+	putpixel(screen, trail->points[i].x, trail->points[i].y, BG_COLOR);
+	trail->points[i] = new_point;
+	draw_trail(trail, TRAIL_BUFFER_LENGTH, 5);
 }
 
 void* graphic_task(void* arg) {
 	struct task_info* task_info = (struct task_info*) arg;
-  char str[100] = { 0 };
+	char str[100] = { 0 };
 	int counter = 0;
 	BITMAP* status_box = create_status_box();
 
 	airplane_t local_airplanes[MAX_AIRPLANE];
-	const waypoint_t* des_point;
+	int local_n_airplanes = 0;
+	cbuffer_t airplane_trails[MAX_AIRPLANE];
+	// const waypoint_t* des_point;
 
-	for (int i = 0; i < MAX_AIRPLANE; ++i) {
+	for (int i = 0; i < local_n_airplanes; ++i) {
 		pthread_mutex_lock(&airplanes[i].mutex);
 		local_airplanes[i] = airplanes[i].airplane;
 		pthread_mutex_unlock(&airplanes[i].mutex);
+		airplane_trails[i].top = 0;
 	}
 
 	task_set_activation(task_info);
 
 	while (!end) {
-		for (int i = 0; i < MAX_AIRPLANE; ++i) {
-			draw_airplane(&local_airplanes[i], BG_COLOR);
+		for (int i = 0; i < n_airplanes; ++i) {
+			if (i < local_n_airplanes)
+				draw_airplane(&local_airplanes[i], BG_COLOR);
 			
 			pthread_mutex_lock(&airplanes[i].mutex);
 			local_airplanes[i] = airplanes[i].airplane;
 			pthread_mutex_unlock(&airplanes[i].mutex);
 			
+			handle_airplane_trail(&local_airplanes[i], &airplane_trails[i]);
 			draw_airplane(&local_airplanes[i], 11);
-			des_point = trajectory_get(&trajectory, local_airplanes[i].traj_index);
-			if (des_point) draw_point(des_point, 4);
+			// des_point = trajectory_get(&trajectory, local_airplanes[i].traj_index);
+			// if (des_point) draw_point(des_point, 4);
+			
 		}
 
 		textout_ex(status_box, font, str,
@@ -310,10 +340,10 @@ void* graphic_task(void* arg) {
 		blit_status_box(status_box);
 		
 		++counter;
+		local_n_airplanes = n_airplanes;
 
 		if (task_deadline_missed(task_info)) {
-			fprintf(stderr, "Deadline miss\n");
-			return NULL;
+			fprintf(stderr, "Graphic task - Deadline miss\n");
 		}
 		task_wait_for_activation(task_info);
 	}
@@ -323,10 +353,51 @@ void* graphic_task(void* arg) {
   return NULL;
 }
 
+void spawn_inbound_airplane() {
+	if (n_airplanes >= MAX_AIRPLANE) return;
+	int i = n_airplanes;
+	int err = 0;
+
+	airplanes[i].airplane = (airplane_t) {
+		.x = 0,
+		.y = 0,
+		.angle = 0,
+		.des_traj = &trajectory,
+		.traj_index = 0
+	};
+	pthread_mutex_init(&airplanes[i].mutex, NULL);
+
+	task_info_init(&airplane_task_infos[i], 2 + i, PERIOD_MS, PERIOD_MS, PRIORITY - 1);
+	airplane_task_infos[i].arg = &airplanes[i];
+	err = task_create(&airplane_task_infos[i], airplane_task);
+	if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
+	++n_airplanes;
+}
+
+void* input_task(void* arg) {
+  char scan = '\0';
+  char ascii = '\0';
+  bool got_key = false;
+
+  do {
+    got_key =  get_keycodes(&scan, &ascii);
+    if (got_key && scan == KEY_O) {
+      printf("Key O pressed\n");
+    } else if (got_key && scan == KEY_I) {
+      printf("Key I pressed\n");
+	  spawn_inbound_airplane();
+    }
+  } while (scan != KEY_ESC);
+
+  printf("Exiting...\n");
+  end = true;
+  return NULL;
+}
+
 int main() {
 	int err = 0;
 	struct task_info graphic_task_info;
-	struct task_info airplane_task_info[MAX_AIRPLANE];
+	struct task_info input_task_info;
 
 	init();
 
@@ -334,23 +405,29 @@ int main() {
 	err = task_create(&graphic_task_info, graphic_task);
 	if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
 
-	for (int i = 0; i < MAX_AIRPLANE; ++i) {
-		task_info_init(&airplane_task_info[i], 1, PERIOD_MS, PERIOD_MS, PRIORITY - 1);
+	/*
+	for (int i = 0; i < n_airplanes; ++i) {
+		task_info_init(&airplane_task_infos[i], 2 + i, PERIOD_MS, PERIOD_MS, PRIORITY - 1);
 		airplane_task_info[i].arg = &airplanes[i];
 		err = task_create(&airplane_task_info[i], airplane_task);
 		if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
-	}
+	}*/
 
-	readkey();
-	end = true;
+	task_info_init(&input_task_info, n_airplanes, PERIOD_MS, PERIOD_MS, PRIORITY);
+	err = task_create(&input_task_info, input_task);
+	if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
 
+	// JOINING
 	err = task_join(&graphic_task_info, NULL);
 	if (err) fprintf(stderr, "Errore while joining the graphic task. Errno %d\n", err);
 
-	for (int i = 0; i < MAX_AIRPLANE; ++i) {
-		err = task_join(&airplane_task_info[i], NULL);
+	for (int i = 0; i < n_airplanes; ++i) {
+		err = task_join(&airplane_task_infos[i], NULL);
 		if (err) fprintf(stderr, "Errore while joining the airplane task. Errno %d\n", err);
 	}
+
+	err = task_join(&input_task_info, NULL);
+	if (err) fprintf(stderr, "Errore while joining the task. Errno %d\n", err);
 
 	allegro_exit();
 	return 0;
