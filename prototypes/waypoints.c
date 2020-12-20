@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <allegro.h>
 
-#define MAX_WAYPOINTS 			50
+#define MAX_WAYPOINTS 		50
 #define TRAJECTORY_POINTS 	50
-#define TRAJECTORY_STEP 		2.0 * M_PI / TRAJECTORY_POINTS
+#define TRAJECTORY_STEP 	2.0 * M_PI / TRAJECTORY_POINTS
 #define TRAJECTORY_RADIUS 	5
-#define SCREEN_WIDTH				1024
-#define SCREEN_HEIGHT				720
-#define BG_COLOR						0     // black
+#define SCREEN_WIDTH		1024
+#define SCREEN_HEIGHT		720
+#define BG_COLOR			0     // black
 
 typedef struct {
 	float x;
@@ -34,7 +34,6 @@ const waypoint_t* trajectory_get(const trajectory_t* trajectory, int index) {
 	}
 	if (trajectory->is_cyclic) {
 		index = index % trajectory->size;
-		printf("%2d - ", index);
 		return &trajectory->waypoints[index];
 	}
 
@@ -58,12 +57,12 @@ void init_trajectory() {
 }
 
 void init() {
-  allegro_init();
-  install_keyboard();
+	allegro_init();
+	install_keyboard();
 
-  set_color_depth(8);
-  set_gfx_mode(GFX_AUTODETECT_WINDOWED, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);
-  clear_to_color(screen, BG_COLOR);
+	set_color_depth(8);
+	set_gfx_mode(GFX_AUTODETECT_WINDOWED, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);
+	clear_to_color(screen, BG_COLOR);
 }
 
 void draw_point(const waypoint_t* point, int color) {

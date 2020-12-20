@@ -8,26 +8,26 @@
 #include "graphics.h"
 
 // GRAPHIC CONSTANTS
-#define SCREEN_WIDTH				1024
-#define SCREEN_HEIGHT				720
-#define BG_COLOR						0     // black
-#define MAIN_COLOR					14		// yellow
+#define SCREEN_WIDTH			1024
+#define SCREEN_HEIGHT			720
+#define BG_COLOR				0     // black
+#define MAIN_COLOR				14		// yellow
 #define STATUS_BOX_WIDTH		SCREEN_WIDTH - SCREEN_HEIGHT - 20
 #define STATUS_BOX_HEIGHT		SCREEN_HEIGHT - 20
-#define STATUS_BOX_X				SCREEN_HEIGHT + 10
-#define STATUS_BOX_Y				10
-#define STATUS_BOX_PADDING 	5
-#define AIRPLANE_SIZE				10
-#define MAX_AIRPLANE				3
+#define STATUS_BOX_X			SCREEN_HEIGHT + 10
+#define STATUS_BOX_Y			10
+#define STATUS_BOX_PADDING 		5
+#define AIRPLANE_SIZE			10
+#define MAX_AIRPLANE			3
 
 #define MAX_WAYPOINTS 			50
-#define TRAJECTORY_POINTS 	30
+#define TRAJECTORY_POINTS 		30
 #define TRAJECTORY_STEP 		2.0 * M_PI / TRAJECTORY_POINTS
-#define TRAJECTORY_RADIUS 	70
+#define TRAJECTORY_RADIUS 		70
 
 #define AIRPLANE_CTRL_OMEGA_GAIN	0.8
 #define AIRPLANE_CTRL_MIN_DIST		20.0
-#define AIRPLANE_CTRL_VEL					15.0
+#define AIRPLANE_CTRL_VEL			15.0
 
 #define GRAPHIC_PERIOD_MS		30
 #define PERIOD_MS     			20
@@ -113,12 +113,12 @@ void init_trajectory() {
 }
 
 void init() {
-  allegro_init();
-  install_keyboard();
+	allegro_init();
+	install_keyboard();
 
-  set_color_depth(8);
-  set_gfx_mode(GFX_AUTODETECT_WINDOWED, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);
-  clear_to_color(screen, BG_COLOR);
+	set_color_depth(8);
+	set_gfx_mode(GFX_AUTODETECT_WINDOWED, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);
+	clear_to_color(screen, BG_COLOR);
 
 	init_trajectory();
 	pthread_mutex_init(&airplanes[0].mutex, NULL);
@@ -324,15 +324,15 @@ void* graphic_task(void* arg) {
 }
 
 int main() {
-  int err = 0;
-  struct task_info graphic_task_info;
+	int err = 0;
+	struct task_info graphic_task_info;
 	struct task_info airplane_task_info[MAX_AIRPLANE];
 
-  init();
+	init();
 
-  task_info_init(&graphic_task_info, 1, GRAPHIC_PERIOD_MS, GRAPHIC_PERIOD_MS, PRIORITY);
-  err = task_create(&graphic_task_info, graphic_task);
-  if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
+	task_info_init(&graphic_task_info, 1, GRAPHIC_PERIOD_MS, GRAPHIC_PERIOD_MS, PRIORITY);
+	err = task_create(&graphic_task_info, graphic_task);
+	if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
 
 	for (int i = 0; i < MAX_AIRPLANE; ++i) {
 		task_info_init(&airplane_task_info[i], 1, PERIOD_MS, PERIOD_MS, PRIORITY - 1);
@@ -345,13 +345,13 @@ int main() {
 	end = true;
 
 	err = task_join(&graphic_task_info, NULL);
-  if (err) fprintf(stderr, "Errore while joining the graphic task. Errno %d\n", err);
+	if (err) fprintf(stderr, "Errore while joining the graphic task. Errno %d\n", err);
 
 	for (int i = 0; i < MAX_AIRPLANE; ++i) {
 		err = task_join(&airplane_task_info[i], NULL);
 		if (err) fprintf(stderr, "Errore while joining the airplane task. Errno %d\n", err);
 	}
 
-  allegro_exit();
-  return 0;
+	allegro_exit();
+	return 0;
 }
