@@ -23,6 +23,7 @@ void rotate_point(float* x, float* y, float xc, float yc,
 	float cos_angle, float sin_angle);
 void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y);
 void draw_airplane(const airplane_t* airplane, int color);
+void draw_point(const waypoint_t* point, int color);
 void draw_trail(const cbuffer_t* trails, int n, int color);
 void handle_airplane_trail(const airplane_t* airplane, cbuffer_t* trail);
 
