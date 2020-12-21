@@ -16,9 +16,9 @@
 #define MAIN_COLOR				14		// yellow
 
 // Status Box
-#define STATUS_BOX_WIDTH		SCREEN_WIDTH - SCREEN_HEIGHT - 20
-#define STATUS_BOX_HEIGHT		SCREEN_HEIGHT - 20
-#define STATUS_BOX_X			SCREEN_HEIGHT + 10
+#define STATUS_BOX_WIDTH		(SCREEN_WIDTH - SCREEN_HEIGHT - 20)
+#define STATUS_BOX_HEIGHT		(SCREEN_HEIGHT - 20)
+#define STATUS_BOX_X			(SCREEN_HEIGHT + 10)
 #define STATUS_BOX_Y			10
 #define STATUS_BOX_PADDING 		5
 
@@ -39,9 +39,7 @@
 //                     TRAJECTORY CONSTATNS
 // ==================================================================
 #define HOLDING_TRAJECTORY_SIZE 		30
-#define HOLDING_TRAJECTORY_STEP 		2.0 * M_PI / HOLDING_TRAJECTORY_SIZE
-#define HOLDING_TRAJECTORY_RADIUS 		70
-#define HOLDING_TRAJECTORY_ARM			100
+#define HOLDING_TRAJECTORY_STEP 		(2.0 * M_PI / HOLDING_TRAJECTORY_SIZE)
 
 // ==================================================================
 //                     ARRAYS MAX LENGTH
