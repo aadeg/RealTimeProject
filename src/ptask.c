@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 #include "ptask.h"
-#include "utils.h"
+#include "consts.h"
 
 #define MS_IN_SEC 1000
 #define NSEC_IN_MS 1000000

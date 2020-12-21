@@ -1,9 +1,7 @@
-#include "graphics.h"
-#include "utils.h"
-
 #include <stdio.h>
 #include <math.h>
 
+#include "graphics.h"
 #include "consts.h"
 
 #define CHAR_SPACING 8

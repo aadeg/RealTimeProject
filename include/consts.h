@@ -58,4 +58,10 @@
 #define AIRPLANE_PERIOD_MS 		20
 #define PRIORITY      			50
 
+// ==================================================================
+//                     		UTILITIES
+// ==================================================================
+#define SUCCESS 0
+#define ERROR_GENERIC -1
+
 #endif
