@@ -9,6 +9,7 @@
 #include "consts.h"
 #include "structs.h"
 
+
 // ==================================================================
 //                        ERROR MESSAGES
 // ==================================================================
@@ -31,6 +32,7 @@ int n_airplanes = 0;		// Number of airplane in the airplanes array
 airplane_queue_t airplane_queue;  // Serving queue
 
 bool end = false;			// true if the program should terminate
+
 
 // ==================================================================
 //                      FUNCTIONS DECLARATION
@@ -282,19 +284,29 @@ void* traffic_controller_task(void* arg) {
 //                           INPUT TASK
 // ==================================================================
 void* input_task(void* arg) {
+	task_info_t* task_info = (task_info_t*) arg;
+
 	char scan = '\0';
 	char ascii = '\0';
 	bool got_key = false;
 
-  	do {
-  	  got_key =  get_keycodes(&scan, &ascii);
-  	  if (got_key && scan == KEY_O) {
-  	    printf("Key O pressed\n");
-  	  } else if (got_key && scan == KEY_I) {
-  	    printf("Key I pressed\n");
-		spawn_inbound_airplane();
-  	  }
-  	} while (scan != KEY_ESC);
+	task_set_activation(task_info);
+
+	do {
+		got_key =  get_keycodes(&scan, &ascii);
+		if (got_key && scan == KEY_O) {
+			printf("Key O pressed\n");
+		} else if (got_key && scan == KEY_I) {
+			printf("Key I pressed\n");
+			spawn_inbound_airplane();
+		}
+
+		// Ending task instance
+		if (task_deadline_missed(task_info))
+			fprintf(stderr, "Input task deadline missed\n");
+		if (scan != KEY_ESC)
+			task_wait_for_activation(task_info);
+	} while (scan != KEY_ESC);
 
 	printf("Exiting...\n");
 	end = true;
