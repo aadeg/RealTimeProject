@@ -17,10 +17,14 @@
 #define ERR_MSG_TASK_JOIN   	"Error while joining %s. Errno %d\n"
 #define ERR_MSG_TASK_JOIN_AIR   "Error while joining airplane task %d. Errno %d\n"
 
+
 // ==================================================================
 //                        GLOBAL VARIABLES
 // ==================================================================
 trajectory_t holding_trajectory;
+trajectory_t runway_0_lading_trajectory;
+trajectory_t runway_1_lading_trajectory;
+
 struct task_info airplane_task_infos[MAX_AIRPLANE];
 shared_airplane_t airplanes[MAX_AIRPLANE];
 int n_airplanes = 0;		// Number of airplane in the airplanes array
@@ -33,8 +37,8 @@ bool end = false;			// true if the program should terminate
 // ==================================================================
 void init();
 void init_holding_trajectory();
-void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info);
-void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info);
+void init_runway_trajectories();
+float linear_interpolate(float start, float end, int n, int index);
 void spawn_inbound_airplane();
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
@@ -129,7 +133,7 @@ void* graphic_task(void* arg) {
 void* airplane_task(void* arg) {
 	struct task_info* task_info = (struct task_info*) arg;
 	shared_airplane_t* global_airplane_ptr = (shared_airplane_t*) task_info->arg;
-	float vel_cmd = 0;
+	float accel_cmd = 0;
 	float omega_cmd = 0;
 	const waypoint_t* des_point;
 	airplane_t local_airplane = global_airplane_ptr->airplane;
@@ -199,6 +203,7 @@ void init() {
 	clear_to_color(screen, BG_COLOR);
 
 	init_holding_trajectory();
+	init_runway_trajectories();
 	airplane_queue_init(&airplane_queue);
 }
 
@@ -228,7 +233,47 @@ void init_holding_trajectory() {
 	}
 }
 
-void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info) {
+float linear_interpolate(float start, float end, int n, int index) {
+	assert(index < n);
+	const float step = 1.0 / n;
+
+	return start + step * index * (end - start);
+}
+
+void init_runway_trajectories() {
+	int i = 0;
+
+	runway_0_lading_trajectory.size = RUNWAY_0_LANDING_TRAJ_SIZE;
+	runway_0_lading_trajectory.is_cyclic = false;
+	for (i = 0; i < RUNWAY_0_LANDING_TRAJ_SIZE; ++i) {
+		runway_0_lading_trajectory.waypoints[i].x = linear_interpolate(
+			RUNWAY_0_LANDING_TRAJ_START_X, RUNWAY_0_LANDING_TRAJ_END_X,
+			RUNWAY_0_LANDING_TRAJ_SIZE, i);
+		runway_0_lading_trajectory.waypoints[i].y = linear_interpolate(
+			RUNWAY_0_LANDING_TRAJ_START_Y, RUNWAY_0_LANDING_TRAJ_END_Y,
+			RUNWAY_0_LANDING_TRAJ_SIZE, i);
+		runway_0_lading_trajectory.waypoints[i].vel = linear_interpolate(
+			HOLDING_TRAJECTORY_VEL, RUNWAY_0_LANDING_TRAJ_END_VEL,
+			RUNWAY_0_LANDING_TRAJ_SIZE, i);
+		
+	}
+
+	runway_1_lading_trajectory.size = RUNWAY_1_LANDING_TRAJ_SIZE;
+	runway_1_lading_trajectory.is_cyclic = false;
+	for (i = 0; i < RUNWAY_1_LANDING_TRAJ_SIZE; ++i) {
+		runway_1_lading_trajectory.waypoints[i].x = linear_interpolate(
+			RUNWAY_1_LANDING_TRAJ_START_X, RUNWAY_1_LANDING_TRAJ_END_X,
+			RUNWAY_1_LANDING_TRAJ_SIZE, i);
+		runway_1_lading_trajectory.waypoints[i].y = linear_interpolate(
+			RUNWAY_1_LANDING_TRAJ_START_Y, RUNWAY_1_LANDING_TRAJ_END_Y,
+			RUNWAY_1_LANDING_TRAJ_SIZE, i);
+		runway_1_lading_trajectory.waypoints[i].vel = linear_interpolate(
+			HOLDING_TRAJECTORY_VEL, RUNWAY_1_LANDING_TRAJ_END_VEL,
+			RUNWAY_1_LANDING_TRAJ_SIZE, i);
+		
+	}
+}
+
 	int err = 0;
 
 	// Creating graphic task
