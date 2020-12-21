@@ -31,6 +31,7 @@
 //                     AIRPLANE TASK CONSTANTS
 // ==================================================================
 #define AIRPLANE_CTRL_OMEGA_GAIN	0.8
+#define AIRPLANE_CTRL_VEL_GAIN		1.0
 #define AIRPLANE_CTRL_MIN_DIST		20.0
 #define AIRPLANE_CTRL_VEL			15.0
 #define AIRPLANE_CTRL_SIM_PERIOD	0.020
