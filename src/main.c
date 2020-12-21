@@ -96,6 +96,7 @@ void* graphic_task(void* arg) {
 	struct task_info* task_info = (struct task_info*) arg;
 	int counter = 0;
 	int i = 0;
+	const waypoint_t* des_point;
 	BITMAP* status_box = create_status_box();
 
 	int local_n_airplanes = 0;
@@ -105,11 +106,15 @@ void* graphic_task(void* arg) {
 	task_set_activation(task_info);
 
 	while (!end) {
+		// Clearing all the airplanes
 		for (i = 0; i < local_n_airplanes; ++i) {
 			draw_airplane(&local_airplanes[i], BG_COLOR);
+			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
+			if (des_point) draw_point(des_point, BG_COLOR);
 		}
 		local_n_airplanes = n_airplanes;
 
+		// Drawing all the airplanes
 		for (i = 0; i < n_airplanes; ++i) {			
 			pthread_mutex_lock(&airplanes[i].mutex);
 			local_airplanes[i] = airplanes[i].airplane;
@@ -117,13 +122,17 @@ void* graphic_task(void* arg) {
 			
 			handle_airplane_trail(&local_airplanes[i], &airplane_trails[i]);
 			draw_airplane(&local_airplanes[i], AIRPLANE_COLOR);
+			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
+			if (des_point) draw_point(des_point, 4);
 		}
 
+		// Drawing Status Box
 		update_status_box(status_box, counter);
 		blit_status_box(status_box);
 		
 		++counter;
 
+		// Ending task instance
 		if (task_deadline_missed(task_info)) {
 			fprintf(stderr, "Graphic task - Deadline miss\n");
 		}
