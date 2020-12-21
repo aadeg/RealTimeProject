@@ -48,9 +48,15 @@ typedef struct {
 } point2i_t;
 
 // Cyclic buffer used to store airplanes' trails
-typedef struct  {
+typedef struct {
 	point2i_t points[TRAIL_BUFFER_LENGTH];
 	int top;	// index of the latest element of the buffer
 } cbuffer_t;
+
+typedef struct {
+	int indexes[AIRPLANE_QUEUE_LENGTH];
+	int top;
+	int bottom;
+} airplane_queue_t;
 
 #endif

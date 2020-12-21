@@ -49,6 +49,7 @@
 #define MAX_AIRPLANE			10
 #define TRAIL_BUFFER_LENGTH		100
 #define MAX_WAYPOINTS 			50
+#define AIRPLANE_QUEUE_LENGTH	(MAX_AIRPLANE + 1)
 
 // ==================================================================
 //                     SCHEDULING CONSTANTS

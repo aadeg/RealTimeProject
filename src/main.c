@@ -24,6 +24,8 @@ trajectory_t holding_trajectory;
 struct task_info airplane_task_infos[MAX_AIRPLANE];
 shared_airplane_t airplanes[MAX_AIRPLANE];
 int n_airplanes = 0;		// Number of airplane in the airplanes array
+airplane_queue_t airplane_queue;  // Serving queue
+
 bool end = false;			// true if the program should terminate
 
 // ==================================================================
@@ -36,6 +38,13 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info);
 void spawn_inbound_airplane();
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
+
+// Airplanes queue
+void airplane_queue_init(airplane_queue_t* queue);
+int airplane_queue_push(airplane_queue_t* queue, int new_value);
+int airplane_queue_pop(airplane_queue_t* queue, int* value);
+bool airplane_queue_is_empty(const airplane_queue_t* queue);
+bool airplane_queue_is_full(const airplane_queue_t* queue);
 
 // Airplane control
 void compute_airplane_controls(const airplane_t* airplane,
@@ -256,13 +265,16 @@ void spawn_inbound_airplane() {
 	int err = 0;
 
 	airplanes[i].airplane = (airplane_t) {
-		.x = 0,
-		.y = 0,
+		.x = 100,
+		.y = 100,
 		.angle = 0,
 		.des_traj = &holding_trajectory,
-		.traj_index = 0
+		.traj_index = 0,
+		.traj_finished = false,
 	};
 	pthread_mutex_init(&airplanes[i].mutex, NULL);
+
+	airplane_queue_push(&airplane_queue, i);
 
 	task_info_init(&airplane_task_infos[i], 2 + i, 
 		AIRPLANE_PERIOD_MS, AIRPLANE_PERIOD_MS, PRIORITY - 1);
@@ -336,4 +348,33 @@ float points_distance(float x1, float y1, float x2, float y2) {
 float wrap_angle_pi(float angle) {
 	int k = ceilf(-angle / (2.0 * M_PI) - 0.5);
 	return angle + 2.0 * M_PI * k;
+}
+
+void airplane_queue_init(airplane_queue_t* queue) {
+	queue->top = 0;
+	queue->bottom = 0;
+}
+
+int airplane_queue_push(airplane_queue_t* queue, int new_value) {
+	if (airplane_queue_is_full(queue)) return ERROR_GENERIC;
+
+	queue->indexes[queue->bottom] = new_value;
+	queue->bottom = (queue->bottom + 1) % AIRPLANE_QUEUE_LENGTH;
+	return SUCCESS;
+}
+
+int airplane_queue_pop(airplane_queue_t* queue, int* value) {
+	if (airplane_queue_is_empty(queue)) return ERROR_GENERIC;
+
+	*value = queue->indexes[queue->top];
+	queue->top = (queue->top + 1) % AIRPLANE_QUEUE_LENGTH;
+	return SUCCESS;
+}
+
+bool airplane_queue_is_empty(const airplane_queue_t* queue) {
+	return queue->top == queue->bottom;
+}
+
+bool airplane_queue_is_full(const airplane_queue_t* queue) {
+	return ((queue->bottom + 1) % AIRPLANE_QUEUE_LENGTH) == queue->top;
 }
