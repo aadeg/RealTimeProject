@@ -39,7 +39,12 @@ void init();
 void init_holding_trajectory();
 void init_runway_trajectories();
 float linear_interpolate(float start, float end, int n, int index);
+void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
+	task_info_t* traffic_ctrl_task_info);
+void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
+	task_info_t* traffic_ctrl_task_info);
 void spawn_inbound_airplane();
+
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
 
@@ -63,6 +68,7 @@ float points_distance(float x1, float y1, float x2, float y2);
 // Task functions
 void* graphic_task(void* arg);
 void* airplane_task(void* arg);
+void* traffic_controller_task(void* arg);
 void* input_task(void* arg);
 
 
@@ -70,16 +76,18 @@ void* input_task(void* arg);
 //                    			MAIN
 // ==================================================================
 int main() {
-	struct task_info graphic_task_info;
-	struct task_info input_task_info;
+	task_info_t graphic_task_info;
+	task_info_t input_task_info;
+	task_info_t traffic_ctlr_task_info;
 
 	init();
-	create_tasks(&graphic_task_info, &input_task_info);
-	join_tasks(&graphic_task_info, &input_task_info);
+	create_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
+	join_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
 
 	allegro_exit();
 	return 0;
 }
+
 
 // ==================================================================
 //                           GRAPHIC TASK
@@ -127,6 +135,7 @@ void* graphic_task(void* arg) {
   return NULL;
 }
 
+
 // ==================================================================
 //                           AIRPLANE TASK
 // ==================================================================
@@ -168,6 +177,98 @@ void* airplane_task(void* arg) {
 	return NULL;
 }
 
+
+// ==================================================================
+//                     TRAFFIC CONTROLLER TASK
+// ==================================================================
+void* traffic_controller_task(void* arg) {
+	task_info_t* task_info = (task_info_t*) arg;
+	int runways_airplane_idx[N_RUNWAYS];
+	int i = 0;
+	int airplane_idx = -1;
+	shared_airplane_t* airplane;
+
+	for (i = 0; i < N_RUNWAYS; ++i)
+		runways_airplane_idx[i] = FREE_RUNWAY;
+
+	task_set_activation(task_info);
+
+	while (!end) {
+		if (runways_airplane_idx[0] != FREE_RUNWAY) {
+			airplane = &airplanes[runways_airplane_idx[0]];
+			pthread_mutex_lock(&airplane->mutex);
+			if (airplane->airplane.traj_finished) {
+				// despawing
+				printf("RUNWAY 0 free\n");
+				runways_airplane_idx[0] = FREE_RUNWAY;
+			}
+			pthread_mutex_unlock(&airplane->mutex);
+		}
+
+		if (runways_airplane_idx[1] != FREE_RUNWAY) {
+			airplane = &airplanes[runways_airplane_idx[1]];
+			pthread_mutex_lock(&airplane->mutex);
+			if (airplane->airplane.traj_finished) {
+				// despawing
+				printf("RUNWAY 0 free\n");
+				runways_airplane_idx[1] = FREE_RUNWAY;
+			}
+			pthread_mutex_unlock(&airplane->mutex);
+		}
+
+		if (runways_airplane_idx[0] == FREE_RUNWAY &&
+				!airplane_queue_is_empty(&airplane_queue)) {
+			airplane_queue_pop(&airplane_queue, &airplane_idx);
+			runways_airplane_idx[0] = airplane_idx;
+			airplane = &airplanes[airplane_idx];
+			
+			pthread_mutex_lock(&airplane->mutex);
+			if (airplane->airplane.status == INBOUND_HOLDING) {
+				airplane->airplane.status = INBOUND_LANDING;
+				airplane->airplane.des_traj = &runway_0_lading_trajectory;
+				airplane->airplane.traj_index = 0;
+				airplane->airplane.traj_finished = false;
+				printf("RUNWAY 0 to %d\n", airplane_idx);
+			} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
+				airplane->airplane.status = OUTBOUND_TAKEOFF;
+			} else { 
+				fprintf(stderr, "Errore status aereo\n");
+			}
+			pthread_mutex_unlock(&airplane->mutex);
+		}
+
+		if (runways_airplane_idx[1] == FREE_RUNWAY &&
+				!airplane_queue_is_empty(&airplane_queue)) {
+			airplane_queue_pop(&airplane_queue, &airplane_idx);
+			runways_airplane_idx[1] = airplane_idx;
+			airplane = &airplanes[airplane_idx];
+			
+			pthread_mutex_lock(&airplane->mutex);
+			if (airplane->airplane.status == INBOUND_HOLDING) {
+				airplane->airplane.status = INBOUND_LANDING;
+				airplane->airplane.des_traj = &runway_1_lading_trajectory;
+				airplane->airplane.traj_index = 0;
+				airplane->airplane.traj_finished = false;
+				printf("RUNWAY 1 to %d\n", airplane_idx);
+			} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
+				airplane->airplane.status = OUTBOUND_TAKEOFF;
+			} else { 
+				fprintf(stderr, "Errore status aereo\n");
+			}
+			pthread_mutex_unlock(&airplane->mutex);
+		}
+
+		// Ending task instance
+		if (task_deadline_missed(task_info)) {
+			fprintf(stderr, "Traffic controller task deadline missed\n");
+		}
+		task_wait_for_activation(task_info);
+	}
+
+	return NULL;
+}
+
+
 // ==================================================================
 //                           INPUT TASK
 // ==================================================================
@@ -190,6 +291,7 @@ void* input_task(void* arg) {
 	end = true;
 	return NULL;
 }
+
 
 // ==================================================================
 //                      FUNCTIONS DEFINITION
@@ -274,6 +376,8 @@ void init_runway_trajectories() {
 	}
 }
 
+void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
+		task_info_t* traffic_ctrl_task_info) {
 	int err = 0;
 
 	// Creating graphic task
@@ -287,9 +391,16 @@ void init_runway_trajectories() {
 		INPUT_PERIOD_MS, INPUT_PERIOD_MS, PRIORITY);
 	err = task_create(input_task_info, input_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "input task", err);
+
+	// Creating traffic controller task
+	task_info_init(traffic_ctrl_task_info, MAX_AIRPLANE + 1, 
+		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, PRIORITY - 2);
+	err = task_create(traffic_ctrl_task_info, traffic_controller_task);
+	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "traffic controller task", err);
 }
 
-void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info) {
+void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
+		task_info_t* traffic_ctrl_task_info) {
 	int err = 0;
 	int i = 0;
 

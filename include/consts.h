@@ -37,7 +37,7 @@
 #define AIRPLANE_CTRL_SIM_PERIOD	0.020
 
 // ==================================================================
-//                     TRAJECTORY CONSTATNS
+//                     TRAJECTORY CONSTANTS
 // ==================================================================
 #define HOLDING_TRAJECTORY_SIZE 		30
 #define HOLDING_TRAJECTORY_STEP 		(2.0 * M_PI / HOLDING_TRAJECTORY_SIZE)
@@ -61,6 +61,13 @@
 #define RUNWAY_1_LANDING_TRAJ_END_Y		50.0
 #define RUNWAY_1_LANDING_TRAJ_END_VEL	5.0
 
+
+// ==================================================================
+//               AIR TRAFFIC CONTROLLER TASK CONSTANTS
+// ==================================================================
+#define N_RUNWAYS		2
+#define FREE_RUNWAY		-1
+
 // ==================================================================
 //                     ARRAYS MAX LENGTH
 // ==================================================================
@@ -75,6 +82,7 @@
 #define GRAPHIC_PERIOD_MS		30
 #define INPUT_PERIOD_MS			30
 #define AIRPLANE_PERIOD_MS 		20
+#define TRAFFIC_CTRL_PERIOD_MS	5
 #define PRIORITY      			50
 
 // ==================================================================
