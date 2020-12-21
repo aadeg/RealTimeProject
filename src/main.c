@@ -51,7 +51,7 @@ void compute_airplane_controls(const airplane_t* airplane,
 	const waypoint_t* des_point, float* vel_cmd, float* omega_cmd);
 void update_airplane_state(airplane_t* airplane, float vel_cmd, 
 	float omega_cmd);
-void update_airplane_traj_index(airplane_t* airplane, 
+void update_airplane_des_trajectory(airplane_t* airplane, 
 	const waypoint_t* des_point);
 float wrap_angle_pi(float angle);
 float points_distance(float x1, float y1, float x2, float y2);
@@ -145,9 +145,7 @@ void* airplane_task(void* arg) {
 		// Computing control; updating the state; updating the reference point
 		des_point = trajectory_get_point(
 			local_airplane.des_traj, local_airplane.traj_index);
-		compute_airplane_controls(&local_airplane, des_point, &vel_cmd, &omega_cmd);
-		update_airplane_state(&local_airplane, vel_cmd, omega_cmd);
-		update_airplane_traj_index(&local_airplane, des_point);
+		update_airplane_des_trajectory(&local_airplane, des_point);
 
 		// Updating the global airplane struct
 		pthread_mutex_lock(&global_airplane_ptr->mutex);
@@ -308,7 +306,7 @@ void update_airplane_state(airplane_t* airplane, float vel_cmd,
 	airplane->angle += wrap_angle_pi(omega_cmd * AIRPLANE_CTRL_SIM_PERIOD);
 }
 
-void update_airplane_traj_index(airplane_t* airplane,
+void update_airplane_des_trajectory(airplane_t* airplane,
 		const waypoint_t* des_point) {
 	float distance = 0.0;
 
@@ -317,6 +315,8 @@ void update_airplane_traj_index(airplane_t* airplane,
 			des_point->x, des_point->y);
 		
 		if (distance < AIRPLANE_CTRL_MIN_DIST) ++airplane->traj_index;
+	} else {
+		airplane->traj_finished = true;
 	}
 }
 

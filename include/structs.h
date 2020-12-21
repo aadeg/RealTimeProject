@@ -10,6 +10,16 @@
 #include "./consts.h"
 
 // ==================================================================
+//                         ENUM DEFINITION
+// ==================================================================
+enum airplane_status {
+	INBOUND_HOLDING,
+	INBOUND_LANDING,
+	OUTBOUND_HOLDING,
+	OUTBOUND_TAKEOFF
+};
+
+// ==================================================================
 //                    STRUCTURES DEFINITION
 // ==================================================================
 // Point of the desired trajectory that an airplane has to follow 
@@ -33,6 +43,8 @@ typedef struct {
 	float angle;		// (rad)
 	const trajectory_t* des_traj;
 	int traj_index;		// the index of the active point of the trajectory
+	bool traj_finished; // true the desired trajectory doesn't have new points
+	enum airplane_status status;
 } airplane_t;
 
 // Puts together the airplane struct with its mutex
