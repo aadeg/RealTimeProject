@@ -48,8 +48,8 @@ bool airplane_queue_is_full(const airplane_queue_t* queue);
 
 // Airplane control
 void compute_airplane_controls(const airplane_t* airplane,
-	const waypoint_t* des_point, float* vel_cmd, float* omega_cmd);
-void update_airplane_state(airplane_t* airplane, float vel_cmd, 
+	const waypoint_t* des_point, float* accel_cmd, float* omega_cmd);
+void update_airplane_state(airplane_t* airplane, float accel_cmd, 
 	float omega_cmd);
 void update_airplane_des_trajectory(airplane_t* airplane, 
 	const waypoint_t* des_point);
@@ -145,6 +145,8 @@ void* airplane_task(void* arg) {
 		// Computing control; updating the state; updating the reference point
 		des_point = trajectory_get_point(
 			local_airplane.des_traj, local_airplane.traj_index);
+		compute_airplane_controls(&local_airplane, des_point, &accel_cmd, &omega_cmd);
+		update_airplane_state(&local_airplane, accel_cmd, omega_cmd);
 		update_airplane_des_trajectory(&local_airplane, des_point);
 
 		// Updating the global airplane struct
@@ -197,6 +199,7 @@ void init() {
 	clear_to_color(screen, BG_COLOR);
 
 	init_holding_trajectory();
+	airplane_queue_init(&airplane_queue);
 }
 
 void init_holding_trajectory() {
@@ -217,7 +220,10 @@ void init_holding_trajectory() {
 		}
 
 		point->y = HOLDING_TRAJECTORY_RADIUS * sinf(s);
+		point->x += HOLDING_TRAJECTORY_X;
+		point->y += HOLDING_TRAJECTORY_Y;
 		point->angle = s + M_PI;
+		point->vel = HOLDING_TRAJECTORY_VEL;
 		s += HOLDING_TRAJECTORY_STEP;
 	}
 }
@@ -266,9 +272,11 @@ void spawn_inbound_airplane() {
 		.x = 100,
 		.y = 100,
 		.angle = 0,
+		.vel = HOLDING_TRAJECTORY_VEL,
 		.des_traj = &holding_trajectory,
 		.traj_index = 0,
 		.traj_finished = false,
+		.status = INBOUND_HOLDING,
 	};
 	pthread_mutex_init(&airplanes[i].mutex, NULL);
 
@@ -284,26 +292,31 @@ void spawn_inbound_airplane() {
 }
 
 void compute_airplane_controls(const airplane_t* airplane, 
-		const waypoint_t* des_point, float* vel_cmd, float* omega_cmd) {
+		const waypoint_t* des_point, float* accel_cmd, float* omega_cmd) {
 	double des_angle = 0.0;
 	double angle_error = 0.0;
+	double vel_error = 0.0;
 	
 	if (des_point) {
 		des_angle = atan2f(des_point->y - airplane->y,
 							des_point->x - airplane->x);
 		angle_error = wrap_angle_pi(des_angle - airplane->angle);
 		*omega_cmd = AIRPLANE_CTRL_OMEGA_GAIN * angle_error;
+		vel_error = des_point->vel - airplane->vel;
+		*accel_cmd = AIRPLANE_CTRL_VEL_GAIN * vel_error;
 	} else {
 		*omega_cmd = 0;
+		*accel_cmd = 0;
 	}
-	*vel_cmd = AIRPLANE_CTRL_VEL;
 }
 
-void update_airplane_state(airplane_t* airplane, float vel_cmd, 
+void update_airplane_state(airplane_t* airplane, float accel_cmd, 
 		float omega_cmd) {
-	airplane->x += vel_cmd * cosf(airplane->angle) * AIRPLANE_CTRL_SIM_PERIOD;
-	airplane->y += vel_cmd * sinf(airplane->angle) * AIRPLANE_CTRL_SIM_PERIOD;
+	float vel = airplane->vel;
+	airplane->x += vel * cosf(airplane->angle) * AIRPLANE_CTRL_SIM_PERIOD;
+	airplane->y += vel * sinf(airplane->angle) * AIRPLANE_CTRL_SIM_PERIOD;
 	airplane->angle += wrap_angle_pi(omega_cmd * AIRPLANE_CTRL_SIM_PERIOD);
+	airplane->vel += accel_cmd * AIRPLANE_CTRL_SIM_PERIOD;
 }
 
 void update_airplane_des_trajectory(airplane_t* airplane,

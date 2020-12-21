@@ -27,6 +27,7 @@ typedef struct {
 	float x;		// (m)
 	float y;		// (m)
 	float angle;	// (rad)
+	float vel;		// (m/s)
 } waypoint_t;
 
 // Desired trajectory that an airplane has to follow
@@ -41,6 +42,7 @@ typedef struct {
 	float x;			// (m)
 	float y;			// (m)
 	float angle;		// (rad)
+	float vel;			// (m/s)
 	const trajectory_t* des_traj;
 	int traj_index;		// the index of the active point of the trajectory
 	bool traj_finished; // true the desired trajectory doesn't have new points
