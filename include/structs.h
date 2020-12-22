@@ -50,9 +50,11 @@ typedef struct {
 } airplane_t;
 
 // Puts together the airplane struct with its mutex
-typedef struct {
+struct shared_airplane;
+typedef struct shared_airplane {
 	airplane_t airplane;
 	pthread_mutex_t mutex;
+	struct shared_airplane* next;
 } shared_airplane_t;
 
 // 2D Point with Interger coordinates
@@ -68,9 +70,16 @@ typedef struct {
 } cbuffer_t;
 
 typedef struct {
-	int indexes[AIRPLANE_QUEUE_LENGTH];
+	shared_airplane_t* elems[AIRPLANE_QUEUE_LENGTH];
 	int top;
 	int bottom;
+	pthread_mutex_t mutex;
 } airplane_queue_t;
+
+typedef struct {
+	shared_airplane_t elems[AIRPLANE_POOL_SIZE];
+	shared_airplane_t* free;
+	pthread_mutex_t mutex;
+} airplane_pool_t;
 
 #endif
