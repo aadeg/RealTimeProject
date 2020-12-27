@@ -107,18 +107,6 @@ void draw_trail(const cbuffer_t* trails, int n, int color) {
 	}
 }
 
-void handle_airplane_trail(const airplane_t* airplane, cbuffer_t* trail) {
-	point2i_t new_point;
-	int i = 0;
-	convert_coord_to_display(airplane->x, airplane->y,
-		&new_point.x, &new_point.y);
-	
-	i = cbuffer_next_index(trail);
-	putpixel(screen, trail->points[i].x, trail->points[i].y, BG_COLOR);
-	trail->points[i] = new_point;
-	draw_trail(trail, TRAIL_BUFFER_LENGTH, 5);
-}
-
 // ==================================================================
 //                          KEYBOARD
 // ==================================================================

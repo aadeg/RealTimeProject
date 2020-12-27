@@ -49,6 +49,7 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	task_info_t* traffic_ctrl_task_info);
 void spawn_inbound_airplane();
 int update_local_airplanes(airplane_t* dst, int max_size);
+void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail);
 
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
@@ -135,6 +136,8 @@ void* graphic_task(void* arg) {
 	while (!end) {
 		// Clearing all the airplanes
 		for (i = 0; i < local_n_airplanes; ++i) {
+			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
+			draw_trail(cur_trail, TRAIL_BUFFER_LENGTH, BG_COLOR);
 			draw_airplane(&local_airplanes[i], BG_COLOR);
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
 			if (des_point) draw_point(des_point, BG_COLOR);
@@ -144,7 +147,8 @@ void* graphic_task(void* arg) {
 		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);
 		for (i = 0; i < local_n_airplanes; ++i) {
 			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
-			handle_airplane_trail(&local_airplanes[i], cur_trail);
+			update_airplane_trail(&local_airplanes[i], cur_trail);
+			draw_trail(cur_trail, TRAIL_BUFFER_LENGTH, 5);
 			draw_airplane(&local_airplanes[i], AIRPLANE_COLOR);
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
 			if (des_point) draw_point(des_point, 4);
@@ -691,6 +695,7 @@ void airplane_pool_init(airplane_pool_t* pool) {
 	}
 	p->next = NULL;
 	pthread_mutex_init(&pool->mutex, NULL);
+	pool->n_free = AIRPLANE_POOL_SIZE;
 }
 
 shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
@@ -701,6 +706,7 @@ shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 		elem = pool->free;
 		pool->free = pool->free->next;
 		elem->next = NULL;
+		--pool->n_free;
 	}
 	pthread_mutex_unlock(&pool->mutex);
 	return elem;
@@ -712,5 +718,16 @@ void airplane_pool_free(airplane_pool_t* pool, shared_airplane_t* elem) {
 	pthread_mutex_lock(&pool->mutex);
 	elem->next = pool->free;
 	pool->free = elem;
+	++pool->n_free;
 	pthread_mutex_unlock(&pool->mutex);
+}
+
+void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail) {
+	point2i_t new_point;
+	int i = 0;
+	convert_coord_to_display(airplane->x, airplane->y,
+		&new_point.x, &new_point.y);
+	
+	i = cbuffer_next_index(trail);
+	trail->points[i] = new_point;
 }
