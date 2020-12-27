@@ -15,6 +15,12 @@
 #define BG_COLOR				0     	// black
 #define MAIN_COLOR				14		// yellow
 
+// Main Box
+#define MAIN_BOX_WIDTH			(SCREEN_HEIGHT - 20)
+#define MAIN_BOX_HEIGHT			(SCREEN_HEIGHT - 20)
+#define MAIN_BOX_X				10
+#define MAIN_BOX_Y				10
+
 // Status Box
 #define STATUS_BOX_WIDTH		(SCREEN_WIDTH - SCREEN_HEIGHT - 20)
 #define STATUS_BOX_HEIGHT		(SCREEN_HEIGHT - 20)

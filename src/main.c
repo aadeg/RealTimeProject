@@ -66,18 +66,6 @@ int airplane_queue_copy(airplane_queue_t* queue,
 	airplane_t* dst_array, int array_size);
 void airplane_queue_print(airplane_queue_t* queue);
 
-
-/*
-void airplane_list_init(airplanes_list_t* list);
-shared_airplane_t* airplane_list_get_new(airplanes_list_t* list);
-void airplane_list_free(airplanes_list_t* list, shared_airplane_t* elem);
-void airplane_list_queue_push(airplanes_list_t* list, shared_airplane_t* new_elem);
-shared_airplane_t* airplane_list_queue_pop(airplanes_list_t* list);
-bool airplane_list_queue_is_empty(airplanes_list_t* list);
-void airplane_list_copy_to_array(airplanes_list_t* list,
-	airplane_t* dst_array, int array_size);
-*/
-
 // Airplane control
 void compute_airplane_controls(const airplane_t* airplane,
 	const waypoint_t* des_point, float* accel_cmd, float* omega_cmd);
@@ -127,6 +115,7 @@ void* graphic_task(void* arg) {
 	int i = 0;
 	const waypoint_t* des_point;
 	BITMAP* status_box = create_status_box();
+	BITMAP* main_box = create_main_box();
 
 	int local_n_airplanes = 0;
 	airplane_t local_airplanes[MAX_AIRPLANE];
@@ -139,34 +128,26 @@ void* graphic_task(void* arg) {
 		// Clearing all the airplanes
 		for (i = 0; i < local_n_airplanes; ++i) {
 			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
-			draw_trail(cur_trail, TRAIL_BUFFER_LENGTH, BG_COLOR);
-			draw_airplane(&local_airplanes[i], BG_COLOR);
+			draw_trail(main_box, cur_trail, TRAIL_BUFFER_LENGTH, BG_COLOR);
+			draw_airplane(main_box, &local_airplanes[i], BG_COLOR);
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
-			if (des_point) draw_point(des_point, BG_COLOR);
+			if (des_point) draw_point(main_box, des_point, BG_COLOR);
 		}
 
 		// Drawing all the airplanes
 		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);
-		// printf("n airp: %d\n", local_n_airplanes);
-		// airplane_queue_print(&airplane_queue);
-		// for (int i = 0; i < N_RUNWAYS; ++i) {
-		// 	if (serving_airplanes[i]) {
-		// 		printf("Runway %d: %2d\n", i, serving_airplanes[i]->airplane.unique_id);
-		// 	} else {
-		// 		printf("Runway %d:  *\n", i);
-		// 	}
-		// }
 		for (i = 0; i < local_n_airplanes; ++i) {
 			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
 			update_airplane_trail(&local_airplanes[i], cur_trail);
-			draw_trail(cur_trail, TRAIL_BUFFER_LENGTH, 5);
-			draw_airplane(&local_airplanes[i], AIRPLANE_COLOR);
+			draw_trail(main_box, cur_trail, TRAIL_BUFFER_LENGTH, 5);
+			draw_airplane(main_box, &local_airplanes[i], AIRPLANE_COLOR);
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
-			if (des_point) draw_point(des_point, 4);
+			if (des_point) draw_point(main_box, des_point, 4);
 		}
 
 		// Drawing Status Box
 		update_status_box(status_box, counter);
+		blit_main_box(main_box);
 		blit_status_box(status_box);
 		
 		++counter;
@@ -463,27 +444,6 @@ int update_local_airplanes(airplane_t* dst, int max_size) {
 		dst[i] = airplanes[i]->airplane;
 		pthread_mutex_unlock(&airplanes[i]->mutex);
 	}
-	/*
-	shared_airplane_t* local_serving_airplanes[N_RUNWAYS];
-
-	pthread_mutex_lock(&serving_airplanes_mutex);
-	for (i = 0; i < N_RUNWAYS; ++i) {
-		local_serving_airplanes[i] = serving_airplanes[i];
-	}
-	pthread_mutex_unlock(&serving_airplanes_mutex);
-
-	for (i = 0; i < N_RUNWAYS; ++i) {
-		if (local_serving_airplanes[i] != NULL) {
-			pthread_mutex_lock(&local_serving_airplanes[i]->mutex);
-			dst[i] = local_serving_airplanes[i]->airplane;
-			pthread_mutex_unlock(&local_serving_airplanes[i]->mutex);
-			++n;
-		}
-	}
-
-	n += airplane_queue_copy(&airplane_queue, &dst[n], max_size - n);
-	*/
-	// printf("%d\n", n);
 	return n;
 }
 

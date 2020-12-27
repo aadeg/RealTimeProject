@@ -12,6 +12,24 @@
 int cbuffer_next_index(cbuffer_t* buffer);
 
 // ==================================================================
+//                            MAIN BOX
+// ==================================================================
+BITMAP* create_main_box() {
+	BITMAP* main_box = create_bitmap(MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
+	clear_to_color(main_box, BG_COLOR);
+	rect(main_box, 0, 0, MAIN_BOX_WIDTH - 1, MAIN_BOX_HEIGHT - 1,
+		MAIN_COLOR);
+	return main_box;
+}
+
+void blit_main_box(BITMAP* main_box) {
+	rect(main_box, 0, 0, MAIN_BOX_WIDTH - 1, MAIN_BOX_HEIGHT - 1,
+		MAIN_COLOR);
+	blit(main_box, screen, 0, 0, MAIN_BOX_X, MAIN_BOX_Y,
+		MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
+}
+
+// ==================================================================
 //                          STATUS BOX
 // ==================================================================
 BITMAP* create_status_box() {
@@ -79,23 +97,23 @@ void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
 	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
 }
 
-void draw_airplane(const airplane_t* airplane, int color) {
+void draw_airplane(BITMAP* bitmap, const airplane_t* airplane, int color) {
 	int x = 0;
 	int y = 0;
 	float angle = (airplane->angle - M_PI_2);
 	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
-	draw_triangle(screen, x, y, AIRPLANE_SIZE, angle, color);
+	draw_triangle(bitmap, x, y, AIRPLANE_SIZE, angle, color);
 }
 
-void draw_point(const waypoint_t* point, int color) {
+void draw_point(BITMAP* bitmap, const waypoint_t* point, int color) {
 	int x = 0;
 	int y = 0;
 	convert_coord_to_display(point->x, point->y, &x, &y);
-	circlefill(screen, x, y, 2, color);
+	circlefill(bitmap, x, y, 2, color);
 }
 
 
-void draw_trail(const cbuffer_t* trails, int n, int color) {
+void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int n, int color) {
 	int i = 0;
 	int idx = 0;
 	
@@ -103,7 +121,7 @@ void draw_trail(const cbuffer_t* trails, int n, int color) {
 	
 	for (i = 0; i < n; ++i) {
 		idx = (trails->top + TRAIL_BUFFER_LENGTH - i) % TRAIL_BUFFER_LENGTH;
-		putpixel(screen, trails->points[idx].x, trails->points[idx].y, color);
+		putpixel(bitmap, trails->points[idx].x, trails->points[idx].y, color);
 	}
 }
 
