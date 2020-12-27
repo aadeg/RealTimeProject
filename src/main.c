@@ -24,14 +24,11 @@
 //                        GLOBAL VARIABLES
 // ==================================================================
 trajectory_t holding_trajectory;
-trajectory_t runway_0_lading_trajectory;
-trajectory_t runway_1_lading_trajectory;
+trajectory_t runway_landing_trajectories[N_RUNWAYS];
 
 struct task_info airplane_task_infos[MAX_AIRPLANE];
-// int n_airplanes = 0;		// Number of airplane in the airplanes array
 airplane_pool_t airplane_pool;
 airplane_queue_t airplane_queue;  // Serving queue
-shared_airplane_t* serving_airplanes[N_RUNWAYS] = { 0 };
 
 bool end = false;			// true if the program should terminate
 
@@ -67,6 +64,7 @@ bool airplane_queue_is_empty(airplane_queue_t* queue);
 bool airplane_queue_is_full(airplane_queue_t* queue);
 int airplane_queue_copy(airplane_queue_t* queue,
 	airplane_t* dst_array, int array_size);
+void airplane_queue_print(airplane_queue_t* queue);
 
 
 /*
@@ -89,6 +87,10 @@ void update_airplane_des_trajectory(airplane_t* airplane,
 	const waypoint_t* des_point);
 float wrap_angle_pi(float angle);
 float points_distance(float x1, float y1, float x2, float y2);
+
+// Traffic controller
+void traffic_controller_free_runway(shared_airplane_t** runways, int runway_id);
+void traffic_controller_assign_runway(shared_airplane_t** runways, int runway_id);
 
 // Task functions
 void* graphic_task(void* arg);
@@ -145,6 +147,15 @@ void* graphic_task(void* arg) {
 
 		// Drawing all the airplanes
 		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);
+		// printf("n airp: %d\n", local_n_airplanes);
+		// airplane_queue_print(&airplane_queue);
+		// for (int i = 0; i < N_RUNWAYS; ++i) {
+		// 	if (serving_airplanes[i]) {
+		// 		printf("Runway %d: %2d\n", i, serving_airplanes[i]->airplane.unique_id);
+		// 	} else {
+		// 		printf("Runway %d:  *\n", i);
+		// 	}
+		// }
 		for (i = 0; i < local_n_airplanes; ++i) {
 			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
 			update_airplane_trail(&local_airplanes[i], cur_trail);
@@ -222,83 +233,16 @@ void* airplane_task(void* arg) {
 // ==================================================================
 void* traffic_controller_task(void* arg) {
 	task_info_t* task_info = (task_info_t*) arg;
-	// int runways_airplane_idx[N_RUNWAYS];
-	// shared_airplane_t* runway_airplane_ptrs[N_RUNWAYS] = { 0 };
-	shared_airplane_t* airplane;
-
-	// for (i = 0; i < N_RUNWAYS; ++i)
-	// 	runways_airplane_idx[i] = FREE_RUNWAY;
+	shared_airplane_t* runways[N_RUNWAYS] = { 0 };
+	int i = 0;
 
 	task_set_activation(task_info);
 
 	while (!end) {
-		if (serving_airplanes[0] != NULL) {
-			airplane = serving_airplanes[0];
-			pthread_mutex_lock(&airplane->mutex);
-			if (airplane->airplane.traj_finished) {
-				// TODO: despawing
-				printf("RUNWAY 0 free\n");
-				airplane->airplane.kill = true;
-				serving_airplanes[0] = NULL;
-			}
-			pthread_mutex_unlock(&airplane->mutex);
+		for (i = 0; i < N_RUNWAYS; ++i) {
+			traffic_controller_free_runway(runways, i);
+			traffic_controller_assign_runway(runways, i);
 		}
-
-		/*
-		if (runways_airplane_idx[1] != FREE_RUNWAY) {
-			airplane = &airplanes[runways_airplane_idx[1]];
-			pthread_mutex_lock(&airplane->mutex);
-			if (airplane->airplane.traj_finished) {
-				// despawing
-				printf("RUNWAY 0 free\n");
-				runways_airplane_idx[1] = FREE_RUNWAY;
-			}
-			pthread_mutex_unlock(&airplane->mutex);
-		}
-		*/
-
-		if (serving_airplanes[0] == NULL &&
-				!airplane_queue_is_empty(&airplane_queue)) {
-			airplane = airplane_queue_pop(&airplane_queue);
-			serving_airplanes[0] = airplane;
-
-			pthread_mutex_lock(&airplane->mutex);
-			if (airplane->airplane.status == INBOUND_HOLDING) {
-				airplane->airplane.status = INBOUND_LANDING;
-				airplane->airplane.des_traj = &runway_0_lading_trajectory;
-				airplane->airplane.traj_index = 0;
-				airplane->airplane.traj_finished = false;
-				printf("RUNWAY 0 to %d\n", airplane->airplane.unique_id);
-			} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
-				airplane->airplane.status = OUTBOUND_TAKEOFF;
-			} else { 
-				fprintf(stderr, "Errore status aereo\n");
-			}
-			pthread_mutex_unlock(&airplane->mutex);
-		}
-
-		/*
-		if (runways_airplane_idx[1] == FREE_RUNWAY &&
-				!airplane_queue_is_empty(&airplane_queue)) {
-			airplane_queue_pop(&airplane_queue, &airplane_idx);
-			runways_airplane_idx[1] = airplane_idx;
-			airplane = &airplanes[airplane_idx];
-			
-			pthread_mutex_lock(&airplane->mutex);
-			if (airplane->airplane.status == INBOUND_HOLDING) {
-				airplane->airplane.status = INBOUND_LANDING;
-				airplane->airplane.des_traj = &runway_1_lading_trajectory;
-				airplane->airplane.traj_index = 0;
-				airplane->airplane.traj_finished = false;
-				printf("RUNWAY 1 to %d\n", airplane_idx);
-			} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
-				airplane->airplane.status = OUTBOUND_TAKEOFF;
-			} else { 
-				fprintf(stderr, "Errore status aereo\n");
-			}
-			pthread_mutex_unlock(&airplane->mutex);
-		}
-		*/
 
 		// Ending task instance
 		if (task_deadline_missed(task_info)) {
@@ -395,38 +339,32 @@ float linear_interpolate(float start, float end, int n, int index) {
 	return start + step * index * (end - start);
 }
 
-void init_runway_trajectories() {
+void init_runway_trajectory(trajectory_t* traj, const int size,
+		const float x_start, const float y_start,
+		const float x_end, const float y_end,
+		const float vel_start, const float vel_end) {
 	int i = 0;
 
-	runway_0_lading_trajectory.size = RUNWAY_0_LANDING_TRAJ_SIZE;
-	runway_0_lading_trajectory.is_cyclic = false;
-	for (i = 0; i < RUNWAY_0_LANDING_TRAJ_SIZE; ++i) {
-		runway_0_lading_trajectory.waypoints[i].x = linear_interpolate(
-			RUNWAY_0_LANDING_TRAJ_START_X, RUNWAY_0_LANDING_TRAJ_END_X,
-			RUNWAY_0_LANDING_TRAJ_SIZE, i);
-		runway_0_lading_trajectory.waypoints[i].y = linear_interpolate(
-			RUNWAY_0_LANDING_TRAJ_START_Y, RUNWAY_0_LANDING_TRAJ_END_Y,
-			RUNWAY_0_LANDING_TRAJ_SIZE, i);
-		runway_0_lading_trajectory.waypoints[i].vel = linear_interpolate(
-			HOLDING_TRAJECTORY_VEL, RUNWAY_0_LANDING_TRAJ_END_VEL,
-			RUNWAY_0_LANDING_TRAJ_SIZE, i);
-		
+	traj->size = size;
+	traj->is_cyclic = false;
+	for (i = 0; i < size; ++i) {
+		traj->waypoints[i].x = linear_interpolate(x_start, x_end, size, i);
+		traj->waypoints[i].y = linear_interpolate(y_start, y_end, size, i);
+		traj->waypoints[i].vel = linear_interpolate(vel_start, vel_end, size, i);
 	}
+}
 
-	runway_1_lading_trajectory.size = RUNWAY_1_LANDING_TRAJ_SIZE;
-	runway_1_lading_trajectory.is_cyclic = false;
-	for (i = 0; i < RUNWAY_1_LANDING_TRAJ_SIZE; ++i) {
-		runway_1_lading_trajectory.waypoints[i].x = linear_interpolate(
-			RUNWAY_1_LANDING_TRAJ_START_X, RUNWAY_1_LANDING_TRAJ_END_X,
-			RUNWAY_1_LANDING_TRAJ_SIZE, i);
-		runway_1_lading_trajectory.waypoints[i].y = linear_interpolate(
-			RUNWAY_1_LANDING_TRAJ_START_Y, RUNWAY_1_LANDING_TRAJ_END_Y,
-			RUNWAY_1_LANDING_TRAJ_SIZE, i);
-		runway_1_lading_trajectory.waypoints[i].vel = linear_interpolate(
-			HOLDING_TRAJECTORY_VEL, RUNWAY_1_LANDING_TRAJ_END_VEL,
-			RUNWAY_1_LANDING_TRAJ_SIZE, i);
-		
-	}
+void init_runway_trajectories() {
+	init_runway_trajectory(&runway_landing_trajectories[0],
+		RUNWAY_0_LANDING_TRAJ_SIZE,
+		RUNWAY_0_LANDING_TRAJ_START_X, RUNWAY_0_LANDING_TRAJ_START_Y,
+		RUNWAY_0_LANDING_TRAJ_END_X, RUNWAY_0_LANDING_TRAJ_END_Y,
+		HOLDING_TRAJECTORY_VEL, RUNWAY_0_LANDING_TRAJ_END_VEL);
+	init_runway_trajectory(&runway_landing_trajectories[1],
+		RUNWAY_1_LANDING_TRAJ_SIZE,
+		RUNWAY_1_LANDING_TRAJ_START_X, RUNWAY_1_LANDING_TRAJ_START_Y,
+		RUNWAY_1_LANDING_TRAJ_END_X, RUNWAY_1_LANDING_TRAJ_END_Y,
+		HOLDING_TRAJECTORY_VEL, RUNWAY_1_LANDING_TRAJ_END_VEL);
 }
 
 void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
@@ -506,18 +444,46 @@ void spawn_inbound_airplane() {
 int update_local_airplanes(airplane_t* dst, int max_size) {
 	assert(max_size > N_RUNWAYS);
 	int i = 0;
+	int j = 0;
 	int n = 0;
+	shared_airplane_t* airplanes[AIRPLANE_POOL_SIZE];
+
+	pthread_mutex_lock(&airplane_pool.mutex);
+	for (i = 0; i < AIRPLANE_POOL_SIZE; ++i) {
+		if (!airplane_pool.is_free[i]) {
+			airplanes[j] = &airplane_pool.elems[i];
+			++j;
+		}
+	}
+	pthread_mutex_unlock(&airplane_pool.mutex);
+	n = j;
+
+	for (i = 0; i < n; ++i) {
+		pthread_mutex_lock(&airplanes[i]->mutex);
+		dst[i] = airplanes[i]->airplane;
+		pthread_mutex_unlock(&airplanes[i]->mutex);
+	}
+	/*
+	shared_airplane_t* local_serving_airplanes[N_RUNWAYS];
+
+	pthread_mutex_lock(&serving_airplanes_mutex);
+	for (i = 0; i < N_RUNWAYS; ++i) {
+		local_serving_airplanes[i] = serving_airplanes[i];
+	}
+	pthread_mutex_unlock(&serving_airplanes_mutex);
 
 	for (i = 0; i < N_RUNWAYS; ++i) {
-		if (serving_airplanes[i] != NULL) {
-			pthread_mutex_lock(&serving_airplanes[i]->mutex);
-			dst[i] = serving_airplanes[i]->airplane;
-			pthread_mutex_unlock(&serving_airplanes[i]->mutex);
+		if (local_serving_airplanes[i] != NULL) {
+			pthread_mutex_lock(&local_serving_airplanes[i]->mutex);
+			dst[i] = local_serving_airplanes[i]->airplane;
+			pthread_mutex_unlock(&local_serving_airplanes[i]->mutex);
 			++n;
 		}
 	}
 
 	n += airplane_queue_copy(&airplane_queue, &dst[n], max_size - n);
+	*/
+	// printf("%d\n", n);
 	return n;
 }
 
@@ -561,6 +527,58 @@ void update_airplane_des_trajectory(airplane_t* airplane,
 	} else {
 		airplane->traj_finished = true;
 	}
+}
+
+// Traiffic controller
+void traffic_controller_free_runway(shared_airplane_t** runways, int runway_id) {
+	shared_airplane_t* airplane = NULL;
+	pthread_mutex_t* mutex = NULL;
+	
+	airplane = runways[runway_id];
+	
+	if (airplane != NULL) {
+		mutex = &airplane->mutex;
+		pthread_mutex_lock(mutex);
+		if (airplane->airplane.traj_finished) {
+			airplane->airplane.kill = true;
+			airplane = NULL;
+		}
+		pthread_mutex_unlock(mutex);
+	}
+
+	runways[runway_id] = airplane;
+}
+
+void traffic_controller_assign_runway(shared_airplane_t** runways, int runway_id) {
+	shared_airplane_t* airplane = NULL;
+	pthread_mutex_t* mutex = NULL;
+	bool is_free = false;
+
+	airplane = runways[runway_id];
+	if (airplane == NULL) {
+		is_free = true;
+		airplane = airplane_queue_pop(&airplane_queue);
+	}
+
+	
+	if (is_free && airplane != NULL) {
+		mutex = &airplane->mutex;
+		pthread_mutex_lock(mutex);
+		if (airplane->airplane.status == INBOUND_HOLDING) {
+			airplane->airplane.status = INBOUND_LANDING;
+			airplane->airplane.des_traj = &runway_landing_trajectories[runway_id];
+			airplane->airplane.traj_index = 0;
+			airplane->airplane.traj_finished = false;
+			printf("RUNWAY %d to %d\n", runway_id, airplane->airplane.unique_id);
+		} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
+			airplane->airplane.status = OUTBOUND_TAKEOFF;
+		} else { 
+			fprintf(stderr, "Errore status aereo: %d\n", airplane->airplane.status);
+		}
+		pthread_mutex_unlock(mutex);
+	}
+
+	runways[runway_id] = airplane;
 }
 
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index) {
@@ -629,6 +647,7 @@ shared_airplane_t* airplane_queue_pop(airplane_queue_t* queue){
 	pthread_mutex_lock(&queue->mutex);
 	if (!airplane_queue_is_empty_unsafe(queue)) {
 		elem = queue->elems[queue->top];
+		queue->elems[queue->top] = NULL;
 		queue->top = (queue->top + 1) % AIRPLANE_QUEUE_LENGTH;
 	}
 	pthread_mutex_unlock(&queue->mutex);
@@ -677,6 +696,32 @@ int airplane_queue_copy(airplane_queue_t* queue,
 	return n;
 }
 
+void airplane_queue_print(airplane_queue_t* queue) {
+	int i = 0;
+
+	pthread_mutex_lock(&queue->mutex);
+	for (i = 0; i < AIRPLANE_QUEUE_LENGTH; ++i) {
+		if (queue->elems[i]) {
+			printf("%2d ", queue->elems[i]->airplane.unique_id);
+		} else {
+			printf(" * ");
+		}
+	}
+	printf("\n");
+	for (i = 0; i < AIRPLANE_QUEUE_LENGTH; ++i) {
+		if (queue->top == i && queue->bottom == i) {
+			printf("TB ");
+		} else if (queue->top == i) {
+			printf(" T ");
+		} else if (queue->bottom == i) {
+			printf(" B ");
+		} else {
+			printf("   ");
+		}
+	}
+	printf("\n");
+	pthread_mutex_unlock(&queue->mutex);
+}
 // Airplane pool
 void airplane_pool_init(airplane_pool_t* pool) {
 	int i = 0;
@@ -691,16 +736,23 @@ void airplane_pool_init(airplane_pool_t* pool) {
 		p = p->next;
 	}
 	p->next = NULL;
+
+	for (i = 0; i < AIRPLANE_POOL_SIZE; ++i)
+		pool->is_free[i] = true;
+
 	pthread_mutex_init(&pool->mutex, NULL);
 	pool->n_free = AIRPLANE_POOL_SIZE;
 }
 
 shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 	shared_airplane_t* elem = NULL;
+	int i = 0;
 
 	pthread_mutex_lock(&pool->mutex);
 	if (pool->free != NULL) {
 		elem = pool->free;
+		i = (elem - &pool->elems[0]);
+		pool->is_free[i] = false;
 		pool->free = pool->free->next;
 		elem->next = NULL;
 		--pool->n_free;
@@ -712,9 +764,14 @@ shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 void airplane_pool_free(airplane_pool_t* pool, shared_airplane_t* elem) {
 	assert(elem->next == NULL);
 	assert(elem >= &(pool->elems[0]) && elem < &(pool->elems[AIRPLANE_POOL_SIZE]));
+
+	int i = 0;
+
 	pthread_mutex_lock(&pool->mutex);
+	i = (elem - &pool->elems[0]);
 	elem->next = pool->free;
 	pool->free = elem;
+	pool->is_free[i] = true;
 	++pool->n_free;
 	pthread_mutex_unlock(&pool->mutex);
 }
