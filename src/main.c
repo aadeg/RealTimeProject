@@ -28,7 +28,7 @@ trajectory_t runway_0_lading_trajectory;
 trajectory_t runway_1_lading_trajectory;
 
 struct task_info airplane_task_infos[MAX_AIRPLANE];
-int n_airplanes = 0;		// Number of airplane in the airplanes array
+// int n_airplanes = 0;		// Number of airplane in the airplanes array
 airplane_pool_t airplane_pool;
 airplane_queue_t airplane_queue;  // Serving queue
 shared_airplane_t* serving_airplanes[N_RUNWAYS] = { 0 };
@@ -48,7 +48,7 @@ void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	task_info_t* traffic_ctrl_task_info);
 void spawn_inbound_airplane();
-void update_local_airplanes(airplane_t* dst, int max_size);
+int update_local_airplanes(airplane_t* dst, int max_size);
 
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
@@ -126,6 +126,7 @@ void* graphic_task(void* arg) {
 	int local_n_airplanes = 0;
 	airplane_t local_airplanes[MAX_AIRPLANE];
 	cbuffer_t airplane_trails[MAX_AIRPLANE];
+	cbuffer_t* cur_trail = NULL;
 
 	task_set_activation(task_info);
 
@@ -136,12 +137,12 @@ void* graphic_task(void* arg) {
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
 			if (des_point) draw_point(des_point, BG_COLOR);
 		}
-		local_n_airplanes = n_airplanes;
 
 		// Drawing all the airplanes
-		update_local_airplanes(local_airplanes, MAX_AIRPLANE);
-		for (i = 0; i < n_airplanes; ++i) {			
-			handle_airplane_trail(&local_airplanes[i], &airplane_trails[i]);
+		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);
+		for (i = 0; i < local_n_airplanes; ++i) {
+			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
+			handle_airplane_trail(&local_airplanes[i], cur_trail);
 			draw_airplane(&local_airplanes[i], AIRPLANE_COLOR);
 			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
 			if (des_point) draw_point(des_point, 4);
@@ -179,7 +180,7 @@ void* airplane_task(void* arg) {
 
 	task_set_activation(task_info);
 
-	while (!end) {
+	while (!end & !local_airplane.kill) {
 		// Updating the local copy of the airplane struct
 		pthread_mutex_lock(&global_airplane_ptr->mutex);
 		local_airplane = global_airplane_ptr->airplane;
@@ -203,6 +204,8 @@ void* airplane_task(void* arg) {
 		}
 		task_wait_for_activation(task_info);
 	}
+	printf("Killing airplane task %d\n", local_airplane.unique_id);
+	airplane_pool_free(&airplane_pool, global_airplane_ptr);
 
 	return NULL;
 }
@@ -230,8 +233,8 @@ void* traffic_controller_task(void* arg) {
 			if (airplane->airplane.traj_finished) {
 				// TODO: despawing
 				printf("RUNWAY 0 free\n");
+				airplane->airplane.kill = true;
 				serving_airplanes[0] = NULL;
-				--n_airplanes;
 			}
 			pthread_mutex_unlock(&airplane->mutex);
 		}
@@ -458,15 +461,15 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	if (err) fprintf(stderr, ERR_MSG_TASK_JOIN, "input task", err);
 
 	// Joining airplane tasks
-	for (i = 0; i < n_airplanes; ++i) {
+	for (i = 0; i < MAX_AIRPLANE; ++i) {
+		printf("Joining airplane task %d\n", i);
 		err = task_join(&airplane_task_infos[i], NULL);
 		if (err) fprintf(stderr, ERR_MSG_TASK_JOIN_AIR, i, err);
 	}
 }
 
 void spawn_inbound_airplane() {
-	if (n_airplanes >= MAX_AIRPLANE) return;
-	int i = n_airplanes;
+	int i = 0;
 	int err = 0;
 
 	shared_airplane_t* new_airplane = airplane_pool_get_new(&airplane_pool);
@@ -481,20 +484,22 @@ void spawn_inbound_airplane() {
 		.traj_index = 0,
 		.traj_finished = false,
 		.status = INBOUND_HOLDING,
+		.unique_id = new_airplane->airplane.unique_id,
+		.kill = false
 	};
 	pthread_mutex_init(&(new_airplane->mutex), NULL);
 	airplane_queue_push(&airplane_queue, new_airplane);
 
+	i = new_airplane->airplane.unique_id;
 	task_info_init(&airplane_task_infos[i], 2 + i, 
 		AIRPLANE_PERIOD_MS, AIRPLANE_PERIOD_MS, PRIORITY - 1);
 	airplane_task_infos[i].arg = new_airplane;
 
 	err = task_create(&airplane_task_infos[i], airplane_task);
 	if (err) fprintf(stderr, "Errore while creating the task. Errno %d\n", err);
-	++n_airplanes;
 }
 
-void update_local_airplanes(airplane_t* dst, int max_size) {
+int update_local_airplanes(airplane_t* dst, int max_size) {
 	assert(max_size > N_RUNWAYS);
 	int i = 0;
 	int n = 0;
@@ -509,7 +514,8 @@ void update_local_airplanes(airplane_t* dst, int max_size) {
 	}
 
 	n += airplane_queue_copy(&airplane_queue, &dst[n], max_size - n);
-	printf("copied  %d elements\n", n);
+	printf("update_local_airplanes - n: %d\n", n);
+	return n;
 }
 
 void compute_airplane_controls(const airplane_t* airplane, 
@@ -660,7 +666,6 @@ int airplane_queue_copy(airplane_queue_t* queue,
 	pthread_mutex_unlock(&queue->mutex);
 	
 	n = i;
-	printf("copying %d airplanes\n", n);
 	for (i = 0; i < n; ++i) {
 		pthread_mutex_lock(&airplanes_ptrs[i]->mutex);
 		dst_array[i] = airplanes_ptrs[i]->airplane;
@@ -674,9 +679,11 @@ void airplane_pool_init(airplane_pool_t* pool) {
 	int i = 0;
 	shared_airplane_t* p;
 
+	pool->elems[0].airplane.unique_id = 0;
 	pool->free = &(pool->elems[0]);
 	p = pool->free;
 	for (i = 1; i < AIRPLANE_POOL_SIZE; ++i) {
+		pool->elems[i].airplane.unique_id = i;
 		p->next = &(pool->elems[i]);
 		p = p->next;
 	}

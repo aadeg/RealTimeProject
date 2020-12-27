@@ -47,6 +47,8 @@ typedef struct {
 	int traj_index;		// the index of the active point of the trajectory
 	bool traj_finished; // true the desired trajectory doesn't have new points
 	enum airplane_status status;
+	int unique_id;
+	bool kill;
 } airplane_t;
 
 // Puts together the airplane struct with its mutex
