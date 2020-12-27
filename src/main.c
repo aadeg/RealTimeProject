@@ -725,20 +725,11 @@ void airplane_queue_print(airplane_queue_t* queue) {
 // Airplane pool
 void airplane_pool_init(airplane_pool_t* pool) {
 	int i = 0;
-	shared_airplane_t* p;
 
-	pool->elems[0].airplane.unique_id = 0;
-	pool->free = &(pool->elems[0]);
-	p = pool->free;
-	for (i = 1; i < AIRPLANE_POOL_SIZE; ++i) {
+	for (i = 0; i < AIRPLANE_POOL_SIZE; ++i) {
 		pool->elems[i].airplane.unique_id = i;
-		p->next = &(pool->elems[i]);
-		p = p->next;
-	}
-	p->next = NULL;
-
-	for (i = 0; i < AIRPLANE_POOL_SIZE; ++i)
 		pool->is_free[i] = true;
+	}
 
 	pthread_mutex_init(&pool->mutex, NULL);
 	pool->n_free = AIRPLANE_POOL_SIZE;
@@ -749,12 +740,13 @@ shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 	int i = 0;
 
 	pthread_mutex_lock(&pool->mutex);
-	if (pool->free != NULL) {
-		elem = pool->free;
-		i = (elem - &pool->elems[0]);
+	while (i < AIRPLANE_POOL_SIZE && pool->is_free[i] == false) {
+		++i;
+	}
+
+	if (i < AIRPLANE_POOL_SIZE) {
+		elem = &pool->elems[i];
 		pool->is_free[i] = false;
-		pool->free = pool->free->next;
-		elem->next = NULL;
 		--pool->n_free;
 	}
 	pthread_mutex_unlock(&pool->mutex);
@@ -762,15 +754,10 @@ shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 }
 
 void airplane_pool_free(airplane_pool_t* pool, shared_airplane_t* elem) {
-	assert(elem->next == NULL);
 	assert(elem >= &(pool->elems[0]) && elem < &(pool->elems[AIRPLANE_POOL_SIZE]));
-
-	int i = 0;
+	int i = elem - &pool->elems[0];
 
 	pthread_mutex_lock(&pool->mutex);
-	i = (elem - &pool->elems[0]);
-	elem->next = pool->free;
-	pool->free = elem;
 	pool->is_free[i] = true;
 	++pool->n_free;
 	pthread_mutex_unlock(&pool->mutex);
