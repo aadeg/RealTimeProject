@@ -108,6 +108,8 @@ int main() {
 	create_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
 	join_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
 
+	assert(airplane_pool.n_free == AIRPLANE_POOL_SIZE);
+
 	allegro_exit();
 	return 0;
 }

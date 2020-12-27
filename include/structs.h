@@ -82,6 +82,7 @@ typedef struct {
 	shared_airplane_t elems[AIRPLANE_POOL_SIZE];
 	shared_airplane_t* free;
 	pthread_mutex_t mutex;
+	int n_free;
 } airplane_pool_t;
 
 #endif
