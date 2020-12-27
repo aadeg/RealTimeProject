@@ -224,7 +224,6 @@ void* traffic_controller_task(void* arg) {
 	task_info_t* task_info = (task_info_t*) arg;
 	// int runways_airplane_idx[N_RUNWAYS];
 	// shared_airplane_t* runway_airplane_ptrs[N_RUNWAYS] = { 0 };
-	int airplane_idx = -1;
 	shared_airplane_t* airplane;
 
 	// for (i = 0; i < N_RUNWAYS; ++i)
@@ -269,7 +268,7 @@ void* traffic_controller_task(void* arg) {
 				airplane->airplane.des_traj = &runway_0_lading_trajectory;
 				airplane->airplane.traj_index = 0;
 				airplane->airplane.traj_finished = false;
-				printf("RUNWAY 0 to %d\n", airplane_idx);
+				printf("RUNWAY 0 to %d\n", airplane->airplane.unique_id);
 			} else if (airplane->airplane.status == OUTBOUND_HOLDING) {
 				airplane->airplane.status = OUTBOUND_TAKEOFF;
 			} else { 
@@ -359,7 +358,7 @@ void init() {
 
 	init_holding_trajectory();
 	init_runway_trajectories();
-	// airplane_queue_init(&airplane_queue);
+	airplane_queue_init(&airplane_queue);
 	airplane_pool_init(&airplane_pool);
 }
 
@@ -468,7 +467,6 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 
 	// Joining airplane tasks
 	for (i = 0; i < MAX_AIRPLANE; ++i) {
-		printf("Joining airplane task %d\n", i);
 		err = task_join(&airplane_task_infos[i], NULL);
 		if (err) fprintf(stderr, ERR_MSG_TASK_JOIN_AIR, i, err);
 	}
@@ -520,7 +518,6 @@ int update_local_airplanes(airplane_t* dst, int max_size) {
 	}
 
 	n += airplane_queue_copy(&airplane_queue, &dst[n], max_size - n);
-	printf("update_local_airplanes - n: %d\n", n);
 	return n;
 }
 
