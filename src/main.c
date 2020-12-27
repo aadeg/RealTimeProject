@@ -125,14 +125,16 @@ void* graphic_task(void* arg) {
 	task_set_activation(task_info);
 
 	while (!end) {
+		clear_main_box(main_box);
+
 		// Clearing all the airplanes
-		for (i = 0; i < local_n_airplanes; ++i) {
-			cur_trail = &airplane_trails[local_airplanes[i].unique_id];
-			draw_trail(main_box, cur_trail, TRAIL_BUFFER_LENGTH, BG_COLOR);
-			draw_airplane(main_box, &local_airplanes[i], BG_COLOR);
-			des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
-			if (des_point) draw_point(main_box, des_point, BG_COLOR);
-		}
+		// for (i = 0; i < local_n_airplanes; ++i) {
+		// 	cur_trail = &airplane_trails[local_airplanes[i].unique_id];
+		// 	draw_trail(main_box, cur_trail, TRAIL_BUFFER_LENGTH, BG_COLOR);
+		// 	draw_airplane(main_box, &local_airplanes[i], BG_COLOR);
+		// 	des_point = trajectory_get_point(local_airplanes[i].des_traj, local_airplanes[i].traj_index);
+		// 	if (des_point) draw_point(main_box, des_point, BG_COLOR);
+		// }
 
 		// Drawing all the airplanes
 		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);

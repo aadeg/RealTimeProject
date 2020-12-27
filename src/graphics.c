@@ -9,6 +9,8 @@
 
 #define SQRT_3		1.732050808
 
+static BITMAP* bg_bitmap = NULL;
+
 int cbuffer_next_index(cbuffer_t* buffer);
 
 // ==================================================================
@@ -16,10 +18,16 @@ int cbuffer_next_index(cbuffer_t* buffer);
 // ==================================================================
 BITMAP* create_main_box() {
 	BITMAP* main_box = create_bitmap(MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
-	clear_to_color(main_box, BG_COLOR);
+	clear_main_box(main_box);
 	rect(main_box, 0, 0, MAIN_BOX_WIDTH - 1, MAIN_BOX_HEIGHT - 1,
 		MAIN_COLOR);
 	return main_box;
+}
+
+void clear_main_box(BITMAP* main_box) {
+	if (bg_bitmap == NULL)
+		bg_bitmap = load_bitmap("assets/background.bmp", NULL);
+	blit(bg_bitmap, main_box, 0, 0, 0, 0, MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
 }
 
 void blit_main_box(BITMAP* main_box) {

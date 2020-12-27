@@ -10,6 +10,7 @@
 //                           MAIN BOX
 // ==================================================================
 BITMAP* create_main_box();
+void clear_main_box(BITMAP* main_box);
 void blit_main_box(BITMAP* main_box);
 
 // ==================================================================
