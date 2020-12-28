@@ -10,6 +10,10 @@
 #define SQRT_3		1.732050808
 
 static BITMAP* bg_bitmap = NULL;
+static int status_box_airplanes_y = 0;
+static int status_box_runways_y[] = { 0, 0 };
+
+
 
 int cbuffer_next_index(cbuffer_t* buffer);
 
@@ -42,9 +46,46 @@ void blit_main_box(BITMAP* main_box) {
 // ==================================================================
 BITMAP* create_status_box() {
 	BITMAP* status_box = create_bitmap(STATUS_BOX_WIDTH, STATUS_BOX_HEIGHT);
+	int y = STATUS_BOX_PADDING;
+
 	clear_to_color(status_box, BG_COLOR);
 	rect(status_box, 0, 0, STATUS_BOX_WIDTH - 1, STATUS_BOX_HEIGHT - 1,
 		MAIN_COLOR);
+
+	textout_ex(status_box, font, "KEYBOARD COMMANDS",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
+	textout_ex(status_box, font, "I: spawn an Inbound airplane",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE;
+	textout_ex(status_box, font, "O: spawn an Outbound airplane",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE;
+	textout_ex(status_box, font, "T: show / hide trails",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE;
+	textout_ex(status_box, font, "W: show / hide next waypoint",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
+	line(status_box, 0, y, STATUS_BOX_WIDTH, y, MAIN_COLOR);
+	y += STATUS_BOX_PADDING;
+	textout_ex(status_box, font, "SYSTEM STATE",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
+	textout_ex(status_box, font, "Airplanes: ",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	status_box_airplanes_y = y;
+
+	y += STATUS_BOX_VSPACE;
+	textout_ex(status_box, font, "Runway 1:",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	status_box_runways_y[0] = y;
+
+	y += STATUS_BOX_VSPACE;
+	textout_ex(status_box, font, "Runway 2:",
+		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	status_box_runways_y[1] = y;
+
 	return status_box;
 }
 
@@ -53,21 +94,26 @@ void blit_status_box(BITMAP* status_box) {
 		STATUS_BOX_WIDTH, STATUS_BOX_HEIGHT);
 }
 
-void update_status_box(BITMAP* status_box, int counter) {
+void update_status_box(BITMAP* status_box, const system_state_t* system_state) {
+	static system_state_t last_system_state = (system_state_t) {
+		.n_airplanes = 0,
+		.is_runway_free = { true, true }
+	};
 	char str[100] = { 0 };
 
+	sprintf(str, "%2d / %2d", last_system_state.n_airplanes, MAX_AIRPLANE);
 	textout_ex(status_box, font, str,
-			STATUS_BOX_PADDING, STATUS_BOX_PADDING, BG_COLOR, BG_COLOR);
-	sprintf(str, "Messaggio di prova %d", counter);
+		STATUS_BOX_FIRST_COL_X, status_box_airplanes_y, BG_COLOR, BG_COLOR);
+	sprintf(str, "%2d / %2d", system_state->n_airplanes, MAX_AIRPLANE);
 	textout_ex(status_box, font, str,
-			STATUS_BOX_PADDING, STATUS_BOX_PADDING, MAIN_COLOR, BG_COLOR);
+		STATUS_BOX_FIRST_COL_X, status_box_airplanes_y, MAIN_COLOR, BG_COLOR);
+	last_system_state = *system_state;
 }
 
 // ==================================================================
 //                        AIRPLANE GRAPHIC
 // ==================================================================
-void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
-		int color) {
+void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys) {
 	float sin_angle = sinf(angle);
 	float cos_angle = cosf(angle);
 	float x1 = SQRT_3 * radius / 2.0 + xc;
@@ -79,11 +125,20 @@ void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 	rotate_point(&x1, &y1, xc, yc, cos_angle, sin_angle);
 	rotate_point(&x2, &y2, xc, yc, cos_angle, sin_angle);
 	rotate_point(&x3, &y3, xc, yc, cos_angle, sin_angle);
-	triangle(bitmap,
-			roundf(x1), roundf(y1),
-			roundf(x2), roundf(y2),
-			roundf(x3), roundf(y3), color);
+	xs[0] = roundf(x1);
+	xs[1] = roundf(x2);
+	xs[2] = roundf(x3);
+	ys[0] = roundf(y1);
+	ys[1] = roundf(y2);
+	ys[2] = roundf(y3);
+}
 
+void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
+		int color, int border_color) {
+	int xs[3];
+	int ys[3];
+	get_triangle_coord(xc, yc, radius, angle, xs, ys);
+	triangle(bitmap, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2], color);
 }
 
 void rotate_point(float* x, float* y, float xc, float yc, 
@@ -105,12 +160,14 @@ void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
 	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
 }
 
-void draw_airplane(BITMAP* bitmap, const airplane_t* airplane, int color) {
+void draw_airplane(BITMAP* bitmap, const airplane_t* airplane) {
 	int x = 0;
 	int y = 0;
 	float angle = (airplane->angle - M_PI_2);
+	int airplane_color = get_airplane_color(airplane);
+
 	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
-	draw_triangle(bitmap, x, y, AIRPLANE_SIZE, angle, color);
+	draw_triangle(bitmap, x, y, AIRPLANE_SIZE, angle, airplane_color, AIRPLANE_BORDER_COLOR);
 }
 
 void draw_point(BITMAP* bitmap, const waypoint_t* point, int color) {

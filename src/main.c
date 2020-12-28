@@ -33,6 +33,8 @@ struct task_info airplane_task_infos[MAX_AIRPLANE];
 airplane_pool_t airplane_pool;
 airplane_queue_t airplane_queue;  // Serving queue
 
+bool show_trails = true;
+bool show_next_waypoint = false;
 bool end = false;			// true if the program should terminate
 
 
@@ -55,11 +57,16 @@ void run_new_airplane(shared_airplane_t* airplane);
 int update_local_airplanes(airplane_t* dst, int max_size);
 void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail);
 void init_trail_buffer(cbuffer_t* trail);
+void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
+	cbuffer_t* trails, bool show_trails);
+void toggle_trails();
+void toggle_next_waypoint();
 
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
 void get_random_inbound_state(float* x, float* y, float* angle);
 void get_random_outbound_state(float* x, float* y, float* angle);
+
 
 // Airplane pool
 void airplane_pool_init(airplane_pool_t* pool);
@@ -123,63 +130,45 @@ void* graphic_task(void* arg) {
 	struct task_info* task_info = (struct task_info*) arg;
 	int counter = 0;
 	int i = 0;
-	int airplane_color = 0;
 	const waypoint_t* des_point;
 	BITMAP* status_box = create_status_box();
 	BITMAP* main_box = create_main_box();
+	system_state_t system_state;
 
 	int local_n_airplanes = 0;
 	airplane_t local_airplanes[MAX_AIRPLANE];
 	cbuffer_t airplane_trails[MAX_AIRPLANE];
-	bool trails_updated[MAX_AIRPLANE] = { 0 };
-	cbuffer_t* cur_trail = NULL;
 	airplane_t* airplane = NULL;
 
 	for (i = 0; i < MAX_AIRPLANE; ++i)
 		init_trail_buffer(&airplane_trails[i]);
+
 	task_set_activation(task_info);
 
 	while (!end) {
 		clear_main_box(main_box);
 
-		for (i = 0; i < MAX_AIRPLANE; ++i)
-			trails_updated[i] = false;
-
-		// for (i = 0; i < runway_takeoff_trajectories[1].size; ++i) {
-		// 	draw_point(main_box, &runway_takeoff_trajectories[1].waypoints[i], 12);
-		// }
-
-		// Drawing all the airplanes
+		// Drawing the airplane trails
 		local_n_airplanes = update_local_airplanes(local_airplanes, MAX_AIRPLANE);
+		handle_trails(main_box, local_airplanes, local_n_airplanes,
+			airplane_trails, show_trails);
+		
+		// Drawing the airplanes
 		for (i = 0; i < local_n_airplanes; ++i) {
 			airplane = &local_airplanes[i];
-			cur_trail = &airplane_trails[airplane->unique_id];
-			trails_updated[airplane->unique_id] = true;
-			update_airplane_trail(airplane, cur_trail);
-			airplane_color = get_airplane_color(airplane);
-			draw_trail(main_box, cur_trail, TRAIL_BUFFER_LENGTH, TRAIL_COLOR);
-			draw_airplane(main_box, airplane, airplane_color);
-			des_point = trajectory_get_point(airplane->des_traj, airplane->traj_index);
-			if (des_point) draw_point(main_box, des_point, 4);
-		}
-
-		for (i = 0; i < MAX_AIRPLANE; ++i) {
-			if (trails_updated[i] == false) {
-				airplane_trails[i].top = 0
-				airplane
+			draw_airplane(main_box, airplane);
+			if (show_next_waypoint) {
+				des_point = trajectory_get_point(airplane->des_traj, airplane->traj_index);
+				if (des_point) draw_point(main_box, des_point, 4);
 			}
 		}
-
-		// int x1, y1, x2, y2;
-		// convert_coord_to_display(OUTBOUND_AREA_X, OUTBOUND_AREA_Y, &x1, &y1);
-		// convert_coord_to_display(OUTBOUND_AREA_X + OUTBOUND_AREA_WIDTH, OUTBOUND_AREA_Y + OUTBOUND_AREA_HEIGHT, &x2, &y2);
-		// rect(main_box, x1, y1, x2, y2, MAIN_COLOR);
 
 		// Drawing Main Box
 		blit_main_box(main_box);
 
 		// Drawing Status Box
-		update_status_box(status_box, counter);
+		system_state.n_airplanes = local_n_airplanes;
+		update_status_box(status_box, &system_state);
 		blit_status_box(status_box);
 		
 		++counter;
@@ -289,6 +278,10 @@ void* input_task(void* arg) {
 		} else if (got_key && scan == KEY_I) {
 			printf("Key I pressed\n");
 			spawn_inbound_airplane();
+		} else if (got_key && scan == KEY_T) {
+			toggle_trails();
+		} else if (got_key && scan == KEY_W) {
+			toggle_next_waypoint();
 		}
 
 		// Ending task instance
@@ -879,5 +872,41 @@ void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail) {
 }
 
 void init_trail_buffer(cbuffer_t* trail) {
-	
+	int i = 0;
+	trail->top = 0;
+	for (i = 0; i < TRAIL_BUFFER_LENGTH; ++i) {
+		trail->points[i].x = 0;
+		trail->points[i].y = 0;
+	}
+}
+
+void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
+		cbuffer_t* trails, bool show_trails) {
+	int i = 0;
+	bool trails_updated[MAX_AIRPLANE] = { 0 };
+	airplane_t* airplane = NULL;
+	cbuffer_t* trail = NULL;
+
+	for (i = 0; i < n_airplanes; ++i) {
+		airplane = &airplanes[i];
+		trail = &trails[airplane->unique_id];
+		trails_updated[airplane->unique_id] = true;
+		update_airplane_trail(airplane, trail);
+		if (show_trails)
+			draw_trail(bitmap, trail, TRAIL_BUFFER_LENGTH, TRAIL_COLOR);
+	}
+
+	// Resetting unused trail buffers
+	for (i = 0; i < MAX_AIRPLANE; ++i) {
+		if (trails_updated[i] == false)
+			init_trail_buffer(&trails[i]);
+	}
+}
+
+void toggle_trails() {
+	show_trails = !show_trails;
+}
+
+void toggle_next_waypoint() {
+	show_next_waypoint = !show_next_waypoint;
 }

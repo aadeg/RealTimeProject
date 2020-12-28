@@ -18,17 +18,19 @@ void blit_main_box(BITMAP* main_box);
 // ==================================================================
 BITMAP* create_status_box();
 void blit_status_box(BITMAP* status_box);
-void update_status_box(BITMAP* status_box, int counter);
+void update_status_box(BITMAP* status_box, const system_state_t* system_state);
+
 
 // ==================================================================
 //                        AIRPLANE GRAPHIC
 // ==================================================================
+void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys);
 void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
-	int color);
+	int color, int border_color);
 void rotate_point(float* x, float* y, float xc, float yc, 
 	float cos_angle, float sin_angle);
 void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y);
-void draw_airplane(BITMAP* bitmap, const airplane_t* airplane, int color);
+void draw_airplane(BITMAP* bitmap, const airplane_t* airplane);
 void draw_point(BITMAP* bitmap, const waypoint_t* point, int color);
 void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int n, int color);
 int get_airplane_color(const airplane_t* airplane);

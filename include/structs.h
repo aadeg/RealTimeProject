@@ -84,4 +84,9 @@ typedef struct {
 	int n_free;
 } airplane_pool_t;
 
+typedef struct {
+	int n_airplanes;
+	bool is_runway_free[N_RUNWAYS];
+} system_state_t;
+
 #endif
