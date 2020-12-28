@@ -31,6 +31,7 @@ void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y);
 void draw_airplane(BITMAP* bitmap, const airplane_t* airplane, int color);
 void draw_point(BITMAP* bitmap, const waypoint_t* point, int color);
 void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int n, int color);
+int get_airplane_color(const airplane_t* airplane);
 
 // ==================================================================
 //                          KEYBOARD

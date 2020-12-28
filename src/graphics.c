@@ -133,6 +133,14 @@ void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int n, int color) {
 	}
 }
 
+int get_airplane_color(const airplane_t* airplane) {
+	enum airplane_status status = airplane->status;
+	if (status == INBOUND_LANDING || status == OUTBOUND_TAKEOFF)
+		return AIRPLANE_RUNWAY_COLOR;
+	else
+		return AIRPLANE_COLOR;
+}
+
 // ==================================================================
 //                          KEYBOARD
 // ==================================================================

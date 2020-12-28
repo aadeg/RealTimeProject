@@ -30,8 +30,10 @@
 
 // Airplane
 #define AIRPLANE_SIZE			10
-#define AIRPLANE_COLOR			11
+#define AIRPLANE_COLOR			15
+#define AIRPLANE_RUNWAY_COLOR	12
 #define AIRPLANE_TRAIL_COLOR	10
+#define TRAIL_COLOR				2
 
 // ==================================================================
 //                     AIRPLANE TASK CONSTANTS
@@ -40,8 +42,10 @@
 #define AIRPLANE_CTRL_OMEGA_GAIN	2.0
 #define AIRPLANE_CTRL_VEL_GAIN		1.0
 #define AIRPLANE_CTRL_MIN_DIST		20.0
+#define AIRPLANE_CTRL_TAXI_MIN_DIST	5.0
 #define AIRPLANE_CTRL_VEL			15.0
 #define AIRPLANE_CTRL_SIM_PERIOD	0.020
+#define AIRPLANE_CTRL_VEL_TH		0.01
 
 // ==================================================================
 //                     TRAJECTORY CONSTANTS
@@ -69,12 +73,43 @@
 #define RUNWAY_1_LANDING_TRAJ_END_Y		-80.0
 #define RUNWAY_1_LANDING_TRAJ_END_VEL	5.0
 
+#define TERMINAL_TRAJ_X		-190
+#define TERMINAL_TRAJ_Y		-238
+#define TERMINAL_TRAJ_VEL	0
+
+#define TAXI_TRAJ_VEL		10.0
+#define TAKEOFF_TRAJ_VEL	50.0
+#define RUNWAY_0_TAKEOFF_TRAJ_SIZE		12
+#define RUNWAY_0_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0, -165.0, -140.0, -110.0, -110.0, -100.0,  -70.0,    0.0, 100.0,  280.0,  350.0}
+#define RUNWAY_0_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0, -190.0, -190.0, -160.0, -150.0, -140.0, -140.0, -140.0, -140.0, -140.0, -350.0}
+#define RUNWAY_0_TAKEOFF_TRAJ_VELS		{TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL}
+
+#define RUNWAY_1_TAKEOFF_TRAJ_SIZE		14
+#define RUNWAY_1_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0, -165.0, -160.0, -160.0, -145.0, -125.0, -110.0, -100.0, -70.0,   0.0, 100.0,  280.0, 350.0}
+#define RUNWAY_1_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0, -190.0, -180.0, -125.0, -110.0, -110.0,  -95.0,  -80.0, -80.0, -80.0, -80.0, -80.0, 100.0}
+#define RUNWAY_1_TAKEOFF_TRAJ_VELS		{TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL}
+
 
 // ==================================================================
 //               AIR TRAFFIC CONTROLLER TASK CONSTANTS
 // ==================================================================
 #define N_RUNWAYS		2
 #define FREE_RUNWAY		-1
+
+
+// ==================================================================
+//                     SPAWING AREA CONSTANTS
+// ==================================================================
+#define INBOUND_AREA_WIDTH		350.0
+#define INBOUND_AREA_HEIGHT		350.0
+#define INBOUND_AREA_X			-20.0
+#define INBOUND_AREA_Y			0.0
+
+#define OUTBOUND_AREA_WIDTH		210.0
+#define OUTBOUND_AREA_HEIGHT	50.0
+#define OUTBOUND_AREA_X			-355.0
+#define OUTBOUND_AREA_Y			-305.0
+
 
 // ==================================================================
 //                     ARRAYS MAX LENGTH
