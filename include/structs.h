@@ -95,7 +95,7 @@ typedef struct {
 } shared_system_state_t;
 
 typedef struct {
-	char str[50];
+	char str[TASK_NAME_LENGTH];
 	int deadline_miss;
 	bool is_running;
 } task_state_t;
