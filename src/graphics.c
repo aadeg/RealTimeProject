@@ -10,8 +10,8 @@
 #define SQRT_3		1.732050808
 
 static BITMAP* bg_bitmap = NULL;
-static int status_box_airplanes_y = 0;
-static int status_box_runways_y[] = { 0, 0 };
+static int sidebar_box_airplanes_y = 0;
+static int sidebar_box_runways_y[] = { 0, 0 };
 
 
 
@@ -42,72 +42,78 @@ void blit_main_box(BITMAP* main_box) {
 }
 
 // ==================================================================
-//                          STATUS BOX
+//                         SIDEBAR BOX
 // ==================================================================
-BITMAP* create_status_box() {
-	BITMAP* status_box = create_bitmap(STATUS_BOX_WIDTH, STATUS_BOX_HEIGHT);
-	int y = STATUS_BOX_PADDING;
+BITMAP* create_sidebar_box() {
+	BITMAP* sidebar_box = create_bitmap(SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
+	int y = SIDEBAR_BOX_PADDING;
 
-	clear_to_color(status_box, BG_COLOR);
-	rect(status_box, 0, 0, STATUS_BOX_WIDTH - 1, STATUS_BOX_HEIGHT - 1,
+	clear_to_color(sidebar_box, BG_COLOR);
+	rect(sidebar_box, 0, 0, SIDEBAR_BOX_WIDTH - 1, SIDEBAR_BOX_HEIGHT - 1,
 		MAIN_COLOR);
 
-	textout_ex(status_box, font, "KEYBOARD COMMANDS",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
-	textout_ex(status_box, font, "I: spawn an Inbound airplane",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE;
-	textout_ex(status_box, font, "O: spawn an Outbound airplane",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE;
-	textout_ex(status_box, font, "T: show / hide trails",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE;
-	textout_ex(status_box, font, "W: show / hide next waypoint",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
-	line(status_box, 0, y, STATUS_BOX_WIDTH, y, MAIN_COLOR);
-	y += STATUS_BOX_PADDING;
-	textout_ex(status_box, font, "SYSTEM STATE",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	y += STATUS_BOX_VSPACE + STATUS_BOX_PADDING;
-	textout_ex(status_box, font, "Airplanes: ",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	status_box_airplanes_y = y;
+	textout_ex(sidebar_box, font, "KEYBOARD COMMANDS",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
+	textout_ex(sidebar_box, font, "I: spawn an Inbound airplane",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE;
+	textout_ex(sidebar_box, font, "O: spawn an Outbound airplane",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE;
+	textout_ex(sidebar_box, font, "T: show / hide trails",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE;
+	textout_ex(sidebar_box, font, "W: show / hide next waypoint",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
+	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
+	y += SIDEBAR_BOX_PADDING;
+	textout_ex(sidebar_box, font, "SYSTEM STATE",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
+	textout_ex(sidebar_box, font, "Airplanes: ",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	sidebar_box_airplanes_y = y;
 
-	y += STATUS_BOX_VSPACE;
-	textout_ex(status_box, font, "Runway 1:",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	status_box_runways_y[0] = y;
+	y += SIDEBAR_BOX_VSPACE;
+	textout_ex(sidebar_box, font, "Runway 1:",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	sidebar_box_runways_y[0] = y;
 
-	y += STATUS_BOX_VSPACE;
-	textout_ex(status_box, font, "Runway 2:",
-		STATUS_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	status_box_runways_y[1] = y;
+	y += SIDEBAR_BOX_VSPACE;
+	textout_ex(sidebar_box, font, "Runway 2:",
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	sidebar_box_runways_y[1] = y;
 
-	return status_box;
+	return sidebar_box;
 }
 
-void blit_status_box(BITMAP* status_box) {
-	blit(status_box, screen, 0, 0, STATUS_BOX_X, STATUS_BOX_Y,
-		STATUS_BOX_WIDTH, STATUS_BOX_HEIGHT);
+void blit_sidebar_box(BITMAP* sidebar_box) {
+	blit(sidebar_box, screen, 0, 0, SIDEBAR_BOX_X, SIDEBAR_BOX_Y,
+		SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
 }
 
-void update_status_box(BITMAP* status_box, const system_state_t* system_state) {
-	static system_state_t last_system_state = (system_state_t) {
-		.n_airplanes = 0,
-		.is_runway_free = { true, true }
-	};
-	char str[100] = { 0 };
+void update_sidebar_box(BITMAP* sidebar_box, const system_state_t* system_state) {
+	char str[40] = { 0 };
+	int i = 0;
 
-	sprintf(str, "%2d / %2d", last_system_state.n_airplanes, MAX_AIRPLANE);
-	textout_ex(status_box, font, str,
-		STATUS_BOX_FIRST_COL_X, status_box_airplanes_y, BG_COLOR, BG_COLOR);
-	sprintf(str, "%2d / %2d", system_state->n_airplanes, MAX_AIRPLANE);
-	textout_ex(status_box, font, str,
-		STATUS_BOX_FIRST_COL_X, status_box_airplanes_y, MAIN_COLOR, BG_COLOR);
-	last_system_state = *system_state;
+	rect(sidebar_box, SIDEBAR_BOX_PADDING, sidebar_box_airplanes_y, 
+		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING,
+		SIDEBAR_BOX_HEIGHT - SIDEBAR_BOX_PADDING,
+		BG_COLOR);
+
+	sprintf(str, "Airplanes:  %02d / %02d", system_state->n_airplanes, MAX_AIRPLANE);
+	textout_ex(sidebar_box, font, str,
+		SIDEBAR_BOX_PADDING, sidebar_box_airplanes_y, MAIN_COLOR, BG_COLOR);
+	for (i = 0; i < N_RUNWAYS; ++i) {
+		if (system_state->is_runway_free[i])
+			sprintf(str, "Runway %d:   %s", i + 1, "free");
+		else
+			sprintf(str, "Runway %d:   %s", i + 1, "busy");
+		textout_ex(sidebar_box, font, str,
+			SIDEBAR_BOX_PADDING, sidebar_box_runways_y[i], MAIN_COLOR, BG_COLOR);
+	}
 }
 
 // ==================================================================

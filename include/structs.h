@@ -89,4 +89,9 @@ typedef struct {
 	bool is_runway_free[N_RUNWAYS];
 } system_state_t;
 
+typedef struct {
+	system_state_t state;
+	pthread_mutex_t mutex;
+} shared_system_state_t;
+
 #endif

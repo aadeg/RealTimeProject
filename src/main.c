@@ -32,6 +32,8 @@ trajectory_t runway_takeoff_trajectories[N_RUNWAYS];
 struct task_info airplane_task_infos[MAX_AIRPLANE];
 airplane_pool_t airplane_pool;
 airplane_queue_t airplane_queue;  // Serving queue
+shared_system_state_t system_state;
+
 
 bool show_trails = true;
 bool show_next_waypoint = false;
@@ -131,9 +133,9 @@ void* graphic_task(void* arg) {
 	int counter = 0;
 	int i = 0;
 	const waypoint_t* des_point;
-	BITMAP* status_box = create_status_box();
+	BITMAP* sidebar_box = create_sidebar_box();
 	BITMAP* main_box = create_main_box();
-	system_state_t system_state;
+	system_state_t local_system_state;
 
 	int local_n_airplanes = 0;
 	airplane_t local_airplanes[MAX_AIRPLANE];
@@ -167,9 +169,11 @@ void* graphic_task(void* arg) {
 		blit_main_box(main_box);
 
 		// Drawing Status Box
-		system_state.n_airplanes = local_n_airplanes;
-		update_status_box(status_box, &system_state);
-		blit_status_box(status_box);
+		pthread_mutex_lock(&system_state.mutex);
+		local_system_state = system_state.state;
+		pthread_mutex_unlock(&system_state.mutex);
+		update_sidebar_box(sidebar_box, &local_system_state);
+		blit_sidebar_box(sidebar_box);
 		
 		++counter;
 
@@ -182,7 +186,7 @@ void* graphic_task(void* arg) {
 
 	printf("Exiting...\n");
 	destroy_bitmap(main_box);
-	destroy_bitmap(status_box);
+	destroy_bitmap(sidebar_box);
   return NULL;
 }
 
@@ -226,6 +230,9 @@ void* airplane_task(void* arg) {
 	}
 	printf("Killing airplane task %d\n", local_airplane.unique_id);
 	airplane_pool_free(&airplane_pool, global_airplane_ptr);
+	pthread_mutex_lock(&system_state.mutex);
+	--system_state.state.n_airplanes;
+	pthread_mutex_unlock(&system_state.mutex);
 
 	return NULL;
 }
@@ -246,6 +253,11 @@ void* traffic_controller_task(void* arg) {
 			traffic_controller_free_runway(runways, i);
 			traffic_controller_assign_runway(runways, i);
 		}
+
+		pthread_mutex_lock(&system_state.mutex);
+		for (i = 0; i < N_RUNWAYS; ++i)
+			system_state.state.is_runway_free[i] = (runways[i] == NULL);
+		pthread_mutex_unlock(&system_state.mutex);
 
 		// Ending task instance
 		if (task_deadline_missed(task_info)) {
@@ -314,6 +326,7 @@ void init() {
 	init_takeoff_trajectories();
 	airplane_queue_init(&airplane_queue);
 	airplane_pool_init(&airplane_pool);
+	pthread_mutex_init(&system_state.mutex, NULL);
 
 	srand(time(NULL));
 }
@@ -517,6 +530,10 @@ void spawn_outbound_airplane() {
 void run_new_airplane(shared_airplane_t* airplane) {
 	int i = 0;
 	int err = 0;
+
+	pthread_mutex_lock(&system_state.mutex);
+	++system_state.state.n_airplanes;
+	pthread_mutex_unlock(&system_state.mutex);
 
 	pthread_mutex_init(&(airplane->mutex), NULL);
 	airplane_queue_push(&airplane_queue, airplane);

@@ -14,11 +14,11 @@ void clear_main_box(BITMAP* main_box);
 void blit_main_box(BITMAP* main_box);
 
 // ==================================================================
-//                          STATUS BOX
+//                         SIDEBAR BOX
 // ==================================================================
-BITMAP* create_status_box();
-void blit_status_box(BITMAP* status_box);
-void update_status_box(BITMAP* status_box, const system_state_t* system_state);
+BITMAP* create_sidebar_box();
+void blit_sidebar_box(BITMAP* sidebar_box);
+void update_sidebar_box(BITMAP* sidebar_box, const system_state_t* system_state);
 
 
 // ==================================================================
