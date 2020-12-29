@@ -29,10 +29,11 @@ trajectory_t terminal_trajectory;
 trajectory_t runway_landing_trajectories[N_RUNWAYS];
 trajectory_t runway_takeoff_trajectories[N_RUNWAYS];
 
-struct task_info airplane_task_infos[MAX_AIRPLANE];
+task_info_t airplane_task_infos[MAX_AIRPLANE];
 airplane_pool_t airplane_pool;
 airplane_queue_t airplane_queue;  // Serving queue
 shared_system_state_t system_state;
+task_state_t task_states[N_TASKS];
 
 
 bool show_trails = true;
@@ -48,6 +49,7 @@ void init_holding_trajectory();
 void init_runway_trajectories();
 void init_takeoff_trajectories();
 void init_terminal_trajectory();
+void init_task_states();
 float linear_interpolate(float start, float end, int n, int index);
 void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	task_info_t* traffic_ctrl_task_info);
@@ -63,6 +65,8 @@ void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 	cbuffer_t* trails, bool show_trails);
 void toggle_trails();
 void toggle_next_waypoint();
+void update_task_states(const task_info_t* task_info);
+
 
 const waypoint_t* trajectory_get_point(const trajectory_t* trajectory, int index);
 int cbuffer_next_index(cbuffer_t* buffer);
@@ -135,7 +139,6 @@ void* graphic_task(void* arg) {
 	const waypoint_t* des_point;
 	BITMAP* sidebar_box = create_sidebar_box();
 	BITMAP* main_box = create_main_box();
-	system_state_t local_system_state;
 
 	int local_n_airplanes = 0;
 	airplane_t local_airplanes[MAX_AIRPLANE];
@@ -145,6 +148,7 @@ void* graphic_task(void* arg) {
 	for (i = 0; i < MAX_AIRPLANE; ++i)
 		init_trail_buffer(&airplane_trails[i]);
 
+	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
 	while (!end) {
@@ -169,10 +173,7 @@ void* graphic_task(void* arg) {
 		blit_main_box(main_box);
 
 		// Drawing Status Box
-		pthread_mutex_lock(&system_state.mutex);
-		local_system_state = system_state.state;
-		pthread_mutex_unlock(&system_state.mutex);
-		update_sidebar_box(sidebar_box, &local_system_state);
+		update_sidebar_box(sidebar_box, &system_state, task_states, N_TASKS);
 		blit_sidebar_box(sidebar_box);
 		
 		++counter;
@@ -181,10 +182,12 @@ void* graphic_task(void* arg) {
 		if (task_deadline_missed(task_info)) {
 			fprintf(stderr, "Graphic task - Deadline miss\n");
 		}
+		update_task_states(task_info);
 		task_wait_for_activation(task_info);
 	}
 
 	printf("Exiting...\n");
+	task_states[task_info->task_num].is_running = false;
 	destroy_bitmap(main_box);
 	destroy_bitmap(sidebar_box);
   return NULL;
@@ -202,6 +205,7 @@ void* airplane_task(void* arg) {
 	const waypoint_t* des_point;
 	airplane_t local_airplane = global_airplane_ptr->airplane;
 
+	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
 	while (!end & !local_airplane.kill) {
@@ -226,6 +230,7 @@ void* airplane_task(void* arg) {
 		if (task_deadline_missed(task_info)) {
 			fprintf(stderr, "Airplane task deadline missed\n");
 		}
+		update_task_states(task_info);
 		task_wait_for_activation(task_info);
 	}
 	printf("Killing airplane task %d\n", local_airplane.unique_id);
@@ -233,6 +238,7 @@ void* airplane_task(void* arg) {
 	pthread_mutex_lock(&system_state.mutex);
 	--system_state.state.n_airplanes;
 	pthread_mutex_unlock(&system_state.mutex);
+	task_states[task_info->task_num].is_running = false;
 
 	return NULL;
 }
@@ -246,6 +252,7 @@ void* traffic_controller_task(void* arg) {
 	shared_airplane_t* runways[N_RUNWAYS] = { 0 };
 	int i = 0;
 
+	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
 	while (!end) {
@@ -263,9 +270,11 @@ void* traffic_controller_task(void* arg) {
 		if (task_deadline_missed(task_info)) {
 			fprintf(stderr, "Traffic controller task deadline missed\n");
 		}
+		update_task_states(task_info);
 		task_wait_for_activation(task_info);
 	}
 
+	task_states[task_info->task_num].is_running = false;
 	return NULL;
 }
 
@@ -280,6 +289,7 @@ void* input_task(void* arg) {
 	char ascii = '\0';
 	bool got_key = false;
 
+	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
 	do {
@@ -299,11 +309,13 @@ void* input_task(void* arg) {
 		// Ending task instance
 		if (task_deadline_missed(task_info))
 			fprintf(stderr, "Input task deadline missed\n");
+		update_task_states(task_info);
 		if (scan != KEY_ESC)
 			task_wait_for_activation(task_info);
 	} while (scan != KEY_ESC);
 
 	printf("Exiting...\n");
+	task_states[task_info->task_num].is_running = false;
 	end = true;
 	return NULL;
 }
@@ -327,6 +339,7 @@ void init() {
 	airplane_queue_init(&airplane_queue);
 	airplane_pool_init(&airplane_pool);
 	pthread_mutex_init(&system_state.mutex, NULL);
+	init_task_states();
 
 	srand(time(NULL));
 }
@@ -436,24 +449,36 @@ void init_terminal_trajectory() {
 	};
 }
 
+void init_task_states() {
+	int i = 0;
+
+	for (i = 0; i < MAX_AIRPLANE; ++i) {
+		sprintf(task_states[i].str, "Airplane %02d:", i + 1);
+	}
+	strcpy(task_states[i].str, "Graphic:");
+	strcpy(task_states[i + 1].str, "Input:");
+	strcpy(task_states[i + 2].str, "Traffic Control:");
+		
+}
+
 void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 		task_info_t* traffic_ctrl_task_info) {
 	int err = 0;
 
 	// Creating graphic task
-	task_info_init(graphic_task_info, 1, 
+	task_info_init(graphic_task_info, MAX_AIRPLANE, 
 		GRAPHIC_PERIOD_MS, GRAPHIC_PERIOD_MS, PRIORITY);
 	err = task_create(graphic_task_info, graphic_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "graphic task", err);
 
 	// Creating input task
-	task_info_init(input_task_info, MAX_AIRPLANE, 
+	task_info_init(input_task_info, MAX_AIRPLANE + 1, 
 		INPUT_PERIOD_MS, INPUT_PERIOD_MS, PRIORITY);
 	err = task_create(input_task_info, input_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "input task", err);
 
 	// Creating traffic controller task
-	task_info_init(traffic_ctrl_task_info, MAX_AIRPLANE + 1, 
+	task_info_init(traffic_ctrl_task_info, MAX_AIRPLANE + 2, 
 		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, PRIORITY - 2);
 	err = task_create(traffic_ctrl_task_info, traffic_controller_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "traffic controller task", err);
@@ -539,7 +564,7 @@ void run_new_airplane(shared_airplane_t* airplane) {
 	airplane_queue_push(&airplane_queue, airplane);
 
 	i = airplane->airplane.unique_id;
-	task_info_init(&airplane_task_infos[i], 2 + i, 
+	task_info_init(&airplane_task_infos[i], i, 
 		AIRPLANE_PERIOD_MS, AIRPLANE_PERIOD_MS, PRIORITY - 1);
 	airplane_task_infos[i].arg = airplane;
 
@@ -926,4 +951,8 @@ void toggle_trails() {
 
 void toggle_next_waypoint() {
 	show_next_waypoint = !show_next_waypoint;
+}
+
+void update_task_states(const task_info_t* task_info) {
+	task_states[task_info->task_num].deadline_miss = task_info->deadline_miss;
 }

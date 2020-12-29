@@ -5,6 +5,7 @@
 #include <allegro.h>
 
 #include "structs.h"
+#include "ptask.h"
 
 // ==================================================================
 //                           MAIN BOX
@@ -18,7 +19,13 @@ void blit_main_box(BITMAP* main_box);
 // ==================================================================
 BITMAP* create_sidebar_box();
 void blit_sidebar_box(BITMAP* sidebar_box);
-void update_sidebar_box(BITMAP* sidebar_box, const system_state_t* system_state);
+void update_sidebar_box(BITMAP* sidebar_box,
+	shared_system_state_t* system_state,
+	task_state_t* task_states, const int task_stats_size);
+void update_sidebar_system_state(BITMAP* sidebar_box,
+	shared_system_state_t* system_state);
+void update_sidebar_tasks_state(BITMAP* sidebar_box,
+	task_state_t* task_states, const int task_states_size);
 
 
 // ==================================================================

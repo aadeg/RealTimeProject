@@ -117,8 +117,9 @@
 // ==================================================================
 //                     ARRAYS MAX LENGTH
 // ==================================================================
-#define MAX_AIRPLANE			10
+#define MAX_AIRPLANE			30
 #define AIRPLANE_POOL_SIZE		MAX_AIRPLANE
+#define N_TASKS					(MAX_AIRPLANE + 3)
 #define TRAIL_BUFFER_LENGTH		50
 #define MAX_WAYPOINTS 			50
 #define AIRPLANE_QUEUE_LENGTH	(MAX_AIRPLANE + 1)

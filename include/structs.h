@@ -94,4 +94,10 @@ typedef struct {
 	pthread_mutex_t mutex;
 } shared_system_state_t;
 
+typedef struct {
+	char str[50];
+	int deadline_miss;
+	bool is_running;
+} task_state_t;
+
 #endif

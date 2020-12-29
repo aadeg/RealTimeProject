@@ -10,8 +10,10 @@
 #define SQRT_3		1.732050808
 
 static BITMAP* bg_bitmap = NULL;
-static int sidebar_box_airplanes_y = 0;
-static int sidebar_box_runways_y[] = { 0, 0 };
+static int sidebar_box_system_state_y_start = 0;
+static int sidebar_box_system_state_y_end = 0;
+static int sidebar_box_tasks_state_y_start = 0;
+static int sidebar_box_tasks_state_y_end = 0;
 
 
 
@@ -72,20 +74,21 @@ BITMAP* create_sidebar_box() {
 	textout_ex(sidebar_box, font, "SYSTEM STATE",
 		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
-	textout_ex(sidebar_box, font, "Airplanes: ",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	sidebar_box_airplanes_y = y;
+	
+	sidebar_box_system_state_y_start = y;
+	y += 3 * SIDEBAR_BOX_VSPACE;
+	sidebar_box_system_state_y_end = y;
+	y += SIDEBAR_BOX_PADDING;
 
-	y += SIDEBAR_BOX_VSPACE;
-	textout_ex(sidebar_box, font, "Runway 1:",
+	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
+	y += SIDEBAR_BOX_PADDING;
+	textout_ex(sidebar_box, font, "TASKS STATE",
 		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	sidebar_box_runways_y[0] = y;
+	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
+	sidebar_box_tasks_state_y_start = y;
+	
 
-	y += SIDEBAR_BOX_VSPACE;
-	textout_ex(sidebar_box, font, "Runway 2:",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
-	sidebar_box_runways_y[1] = y;
-
+	sidebar_box_tasks_state_y_end = SIDEBAR_BOX_HEIGHT - SIDEBAR_BOX_PADDING;
 	return sidebar_box;
 }
 
@@ -94,25 +97,67 @@ void blit_sidebar_box(BITMAP* sidebar_box) {
 		SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
 }
 
-void update_sidebar_box(BITMAP* sidebar_box, const system_state_t* system_state) {
+void update_sidebar_box(BITMAP* sidebar_box, shared_system_state_t* system_state,
+		task_state_t* task_states, const int task_states_size) {
+	update_sidebar_system_state(sidebar_box, system_state);
+	update_sidebar_tasks_state(sidebar_box, task_states, task_states_size);
+}
+
+void update_sidebar_system_state(BITMAP* sidebar_box,
+		shared_system_state_t* system_state) {
 	char str[40] = { 0 };
 	int i = 0;
+	int y = sidebar_box_system_state_y_start;
+	system_state_t local_system_state;
 
-	rect(sidebar_box, SIDEBAR_BOX_PADDING, sidebar_box_airplanes_y, 
-		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING,
-		SIDEBAR_BOX_HEIGHT - SIDEBAR_BOX_PADDING,
+	pthread_mutex_lock(&system_state->mutex);
+	local_system_state = system_state->state;
+	pthread_mutex_unlock(&system_state->mutex);
+
+	rect(sidebar_box,
+		SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_start, 
+		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_end,
 		BG_COLOR);
 
-	sprintf(str, "Airplanes:  %02d / %02d", system_state->n_airplanes, MAX_AIRPLANE);
+	sprintf(str, "Airplanes:  %02d / %02d", local_system_state.n_airplanes, MAX_AIRPLANE);
 	textout_ex(sidebar_box, font, str,
-		SIDEBAR_BOX_PADDING, sidebar_box_airplanes_y, MAIN_COLOR, BG_COLOR);
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE;
 	for (i = 0; i < N_RUNWAYS; ++i) {
-		if (system_state->is_runway_free[i])
+		if (local_system_state.is_runway_free[i])
 			sprintf(str, "Runway %d:   %s", i + 1, "free");
 		else
 			sprintf(str, "Runway %d:   %s", i + 1, "busy");
 		textout_ex(sidebar_box, font, str,
-			SIDEBAR_BOX_PADDING, sidebar_box_runways_y[i], MAIN_COLOR, BG_COLOR);
+			SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+		y += SIDEBAR_BOX_VSPACE;
+	}
+}
+
+void update_sidebar_tasks_state(BITMAP* sidebar_box,
+		task_state_t* task_states, const int task_states_size) {
+	char str[40] = { 0 };
+	int i = 0;
+	int y = sidebar_box_tasks_state_y_start;
+	char state;
+
+	rect(sidebar_box,
+		SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
+		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
+		BG_COLOR);
+
+	sprintf(str, "%-16s %3s %3s", "", "sts", "dlm");
+	textout_ex(sidebar_box, font, str,
+		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
+
+	for (i = 0; i < task_states_size; ++i) {
+		state = task_states[i].is_running ? 'R' : 'S';
+		sprintf(str, "%-16s  %c  %3d",
+			task_states[i].str, state, task_states[i].deadline_miss);
+		textout_ex(sidebar_box, font, str,
+			SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+		y += SIDEBAR_BOX_VSPACE;
 	}
 }
 
