@@ -73,6 +73,7 @@ add_executable(main
   src/ptask.c
   src/graphics.c
   src/main.c
+  src/structs.c
 )
 target_link_libraries(main
 	pthread

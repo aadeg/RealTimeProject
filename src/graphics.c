@@ -251,11 +251,11 @@ void draw_airplane(BITMAP* bitmap, const airplane_t* airplane) {
 }
 
 // Draw a waypoint to "bitmap"
-void draw_waypoint(BITMAP* bitmap, const waypoint_t* point, int color) {
+void draw_waypoint(BITMAP* bitmap, const waypoint_t* point) {
 	int x = 0;			// screen x-coordinate
 	int y = 0;			// screen y-coordinate
 	convert_coord_to_display(point->x, point->y, &x, &y);
-	circlefill(bitmap, x, y, WAYPOINT_RADIUS, color);
+	circlefill(bitmap, x, y, WAYPOINT_RADIUS, WAYPOINT_COLOR);
 }
 
 // Draw the trail of an airplane to "bitmap"

@@ -37,6 +37,7 @@
 #define AIRPLANE_TRAIL_COLOR	10
 #define TRAIL_COLOR				2
 #define WAYPOINT_RADIUS			2
+#define WAYPOINT_COLOR			4
 
 // ==================================================================
 //                     AIRPLANE TASK CONSTANTS
