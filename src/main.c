@@ -1,3 +1,8 @@
+/*
+ * main.c
+ * 
+ */
+
 #include <stdbool.h>
 #include <allegro.h>
 #include <pthread.h>
@@ -38,19 +43,19 @@ task_state_t task_states[N_TASKS];
 
 bool show_trails = true;
 bool show_next_waypoint = false;
-bool end = false;			// true if the program should terminate
+bool end_all = false;			// true if the program should terminate
 
 
 // ==================================================================
 //                      FUNCTIONS DECLARATION
 // ==================================================================
 // Init functions
-void init();
-void init_holding_trajectory();
-void init_landing_trajectories();
-void init_takeoff_trajectories();
-void init_terminal_trajectory();
-void init_task_states();
+void init(void);
+void init_holding_trajectory(void);
+void init_landing_trajectories(void);
+void init_takeoff_trajectories(void);
+void init_terminal_trajectory(void);
+void init_task_states(void);
 
 // Task functions
 void* graphic_task(void* arg);
@@ -65,8 +70,8 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	task_info_t* traffic_ctrl_task_info);
 
 // Airplane spawning functions
-void spawn_inbound_airplane();
-void spawn_outbound_airplane();
+void spawn_inbound_airplane(void);
+void spawn_outbound_airplane(void);
 void run_new_airplane(shared_airplane_t* airplane);
 
 // Airplane control
@@ -90,8 +95,8 @@ int copy_shared_airplanes(airplane_t* dst, int max_size);
 void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail);
 void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 	cbuffer_t* trails, bool show_trails);
-void toggle_trails();
-void toggle_next_waypoint();
+void toggle_trails(void);
+void toggle_next_waypoint(void);
 
 // Utility functions
 void update_task_states(const task_info_t* task_info);
@@ -103,7 +108,7 @@ void get_random_outbound_state(float* x, float* y, float* angle);
 // ==================================================================
 //                    			MAIN
 // ==================================================================
-int main() {
+int main(void) {
 	task_info_t graphic_task_info;
 	task_info_t input_task_info;
 	task_info_t traffic_ctlr_task_info;
@@ -131,7 +136,7 @@ void* airplane_task(void* arg) {
 	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
-	while (!end & !local_airplane.kill) {
+	while (!end_all & !local_airplane.kill) {
 		// Updating the local copy of the airplane struct
 		pthread_mutex_lock(&global_airplane_ptr->mutex);
 		local_airplane = global_airplane_ptr->airplane;
@@ -176,7 +181,7 @@ void* traffic_controller_task(void* arg) {
 	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
-	while (!end) {
+	while (!end_all) {
 		// Checking if an airplane has freed the runway and assigning the runway
 		// to a new airplane
 		for (i = 0; i < N_RUNWAYS; ++i) {
@@ -221,7 +226,7 @@ void* graphic_task(void* arg) {
 	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
-	while (!end) {
+	while (!end_all) {
 		clear_main_box(main_box);
 
 		// Drawing Main Box
@@ -283,7 +288,7 @@ void* input_task(void* arg) {
 
 	printf("Exiting...\n");
 	task_states[task_info->task_num].is_running = false;
-	end = true;
+	end_all = true;
 	return NULL;
 }
 
@@ -291,7 +296,7 @@ void* input_task(void* arg) {
 // ==================================================================
 //                      FUNCTIONS DEFINITION
 // ==================================================================
-void init() {
+void init(void) {
 	// Allegro initialization
 	allegro_init();
 	install_keyboard();
@@ -314,10 +319,11 @@ void init() {
 }
 
 // Initialize the holding trajectory
-void init_holding_trajectory() {
+void init_holding_trajectory(void) {
 	int i = 0;
-	float s = 0.0;				// Curvilinear coordinate
 	waypoint_t* point = NULL;	// Pointer to the working point
+	float s = 0.0;				// Curvilinear coordinate
+	const float step = (2.0f * M_PI_F/ HOLDING_TRAJECTORY_SIZE);
 
 	holding_trajectory.size = HOLDING_TRAJECTORY_SIZE;
 	holding_trajectory.is_cyclic = true;
@@ -326,7 +332,7 @@ void init_holding_trajectory() {
 		
 		// x coordinate
 		point->x = HOLDING_TRAJECTORY_RADIUS * cosf(s);
-		if (s < M_PI_2 ||s >= 3.0 * M_PI_2) {
+		if (s < M_PI_2_F ||s >= 3.0f * M_PI_2_F) {
 			point->x += HOLDING_TRAJECTORY_ARM;
 		} else {
 			point->x -= HOLDING_TRAJECTORY_ARM;
@@ -338,10 +344,10 @@ void init_holding_trajectory() {
 		point->y += HOLDING_TRAJECTORY_Y;
 
 		// angle and velocity		
-		point->angle = s + M_PI;
+		point->angle = s + M_PI_F;
 		point->vel = HOLDING_TRAJECTORY_VEL;
 
-		s += HOLDING_TRAJECTORY_STEP;
+		s += step;
 	}
 }
 
@@ -363,7 +369,7 @@ void _init_landing_trajectory(trajectory_t* traj, const int size,
 }
 
 // Initialize the runways landing trajectory
-void init_landing_trajectories() {
+void init_landing_trajectories(void) {
 	_init_landing_trajectory(&runway_landing_trajectories[0],
 		RUNWAY_0_LANDING_TRAJ_SIZE,
 		RUNWAY_0_LANDING_TRAJ_START_X, RUNWAY_0_LANDING_TRAJ_START_Y,
@@ -393,7 +399,7 @@ void _init_takeoff_trajectory(trajectory_t* traj, float* xs, float* ys,
 }
 
 // Initialize the takeoff trajectories
-void init_takeoff_trajectories() {
+void init_takeoff_trajectories(void) {
 	float runway_0_xs[] 	= RUNWAY_0_TAKEOFF_TRAJ_XS;
 	float runway_0_ys[] 	= RUNWAY_0_TAKEOFF_TRAJ_YS;
 	float runway_0_vels[] 	= RUNWAY_0_TAKEOFF_TRAJ_VELS;
@@ -412,7 +418,7 @@ void init_takeoff_trajectories() {
 		RUNWAY_1_TAKEOFF_TRAJ_SIZE);	
 }
 
-void init_terminal_trajectory() {
+void init_terminal_trajectory(void) {
 	terminal_trajectory.is_cyclic = true;
 	terminal_trajectory.size = 1;
 	terminal_trajectory.waypoints[0] = (waypoint_t) {
@@ -423,7 +429,7 @@ void init_terminal_trajectory() {
 }
 
 // Initialized the task states
-void init_task_states() {
+void init_task_states(void) {
 	int i = 0;
 
 	// Setting the names of the tasks
@@ -473,15 +479,19 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	err = task_join(input_task_info, NULL);
 	if (err) fprintf(stderr, ERR_MSG_TASK_JOIN, "input task", err);
 
+	// Joining traffic controller task
+	err = task_join(traffic_ctrl_task_info, NULL);
+	if (err) fprintf(stderr, ERR_MSG_TASK_JOIN, "traffic controller", err);
+
 	// Joining airplane tasks
 	for (i = 0; i < MAX_AIRPLANE; ++i) {
 		err = task_join(&airplane_task_infos[i], NULL);
-		if (err) fprintf(stderr, ERR_MSG_TASK_JOIN_AIR, i, err);
+		// if (err) fprintf(stderr, ERR_MSG_TASK_JOIN_AIR, i, err);
 	}
 }
 
 // Initialize and spawn a new inbound airplane
-void spawn_inbound_airplane() {
+void spawn_inbound_airplane(void) {
 	float x = 0.0;
 	float y = 0.0;
 	float angle = 0.0;
@@ -510,7 +520,7 @@ void spawn_inbound_airplane() {
 }
 
 // Initialize and spawn a new outbound airplane
-void spawn_outbound_airplane() {
+void spawn_outbound_airplane(void) {
 	float x = 0;
 	float y = 0;
 	float angle = 0;
@@ -564,7 +574,7 @@ void run_new_airplane(shared_airplane_t* airplane) {
 float get_random_float(float min, float max) {
 	assert(min <= max);
 	float diff = max - min;
-	float r = ((float) rand()) / RAND_MAX;
+	float r = ((float) rand()) / (float) RAND_MAX;
 	return r * diff + min;
 }
 
@@ -572,14 +582,14 @@ float get_random_float(float min, float max) {
 void get_random_inbound_state(float* x, float* y, float* angle) {
 	*x = get_random_float(INBOUND_AREA_X, INBOUND_AREA_X + INBOUND_AREA_WIDTH);
 	*y = get_random_float(INBOUND_AREA_Y, INBOUND_AREA_Y + INBOUND_AREA_HEIGHT);
-	*angle = get_random_float(0, 2 * M_PI);
+	*angle = get_random_float(0, 2.0f * M_PI_F);
 }
 
 // Return a random state for an outbound airplane
 void get_random_outbound_state(float* x, float* y, float* angle) {
 	*x = get_random_float(OUTBOUND_AREA_X, OUTBOUND_AREA_X + OUTBOUND_AREA_WIDTH);
 	*y = get_random_float(OUTBOUND_AREA_Y, OUTBOUND_AREA_Y + OUTBOUND_AREA_HEIGHT);
-	*angle = get_random_float(0, 2 * M_PI);
+	*angle = get_random_float(0, 2.0f * M_PI_F);
 }
 
 // Update the main box by drawing the airplanes and the trails
@@ -622,7 +632,7 @@ int copy_shared_airplanes(airplane_t* dst, int max_size) {
 	pthread_mutex_unlock(&airplane_pool.mutex);
 
 	// safe copying the airplanes to the destination array
-	for (i = 0; i < n; ++i) {
+	for (i = 0; i < n && i < max_size; ++i) {
 		pthread_mutex_lock(&airplanes[i]->mutex);
 		dst[i] = airplanes[i]->airplane;
 		pthread_mutex_unlock(&airplanes[i]->mutex);
@@ -646,9 +656,9 @@ void airplane_controller_evolve(airplane_t* airplane) {
 // angular velocity command
 void compute_airplane_controls(const airplane_t* airplane, 
 		const waypoint_t* des_point, float* accel_cmd, float* omega_cmd) {
-	double des_angle = 0.0;			// desired angle
-	double angle_error = 0.0;
-	double vel_error = 0.0;
+	float des_angle = 0.0;			// desired angle
+	float angle_error = 0.0;
+	float vel_error = 0.0;
 	
 	if (des_point) {
 		// acceleration command
@@ -771,8 +781,8 @@ float points_distance(float x1, float y1, float x2, float y2) {
 
 // Return the provided angle wrapped in [-pi, pi]
 float wrap_angle_pi(float angle) {
-	int k = ceilf(-angle / (2.0 * M_PI) - 0.5);
-	return angle + 2.0 * M_PI * k;
+	float k = ceilf(-angle / (2.0f * M_PI_F) - 0.5f);
+	return angle + 2.0f * M_PI_F * k;
 }
 
 // Append the current position of the airplane to the trail buffer
@@ -791,7 +801,7 @@ void update_airplane_trail(const airplane_t* airplane, cbuffer_t* trail) {
 
 // handle the update, the draw and the reset of the trail array
 void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
-		cbuffer_t* trails, bool show_trails) {
+		cbuffer_t* trails, bool show_trails_) {
 	int i = 0;
 	airplane_t* airplane = NULL;
 	cbuffer_t* trail = NULL;
@@ -805,7 +815,7 @@ void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 		trail = &trails[airplane->unique_id];
 		trails_updated[airplane->unique_id] = true;
 		update_airplane_trail(airplane, trail);
-		if (show_trails)
+		if (show_trails_)
 			draw_trail(bitmap, trail, TRAIL_COLOR);
 	}
 
@@ -816,11 +826,11 @@ void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 	}
 }
 
-void toggle_trails() {
+void toggle_trails(void) {
 	show_trails = !show_trails;
 }
 
-void toggle_next_waypoint() {
+void toggle_next_waypoint(void) {
 	show_next_waypoint = !show_next_waypoint;
 }
 
@@ -832,7 +842,7 @@ void update_task_states(const task_info_t* task_info) {
 // from "start" to "end" in "n" steps
 float linear_interpolate(float start, float end, int n, int i) {
 	assert(i < n);
-	const float step_size = (end - start) / n;
+	const float step_size = (end - start) / (float) n;
 
-	return start + step_size * i;
+	return start + step_size * (float) i;
 }

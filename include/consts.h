@@ -43,54 +43,53 @@
 //                     AIRPLANE TASK CONSTANTS
 // ==================================================================
 // #define AIRPLANE_CTRL_OMEGA_GAIN	0.8
-#define AIRPLANE_CTRL_OMEGA_GAIN	2.0
-#define AIRPLANE_CTRL_VEL_GAIN		1.0
-#define AIRPLANE_CTRL_MIN_DIST		20.0
-#define AIRPLANE_CTRL_TAXI_MIN_DIST	5.0
-#define AIRPLANE_CTRL_VEL			15.0
-#define AIRPLANE_CTRL_SIM_PERIOD	0.020
-#define AIRPLANE_CTRL_VEL_TH		0.01
+#define AIRPLANE_CTRL_OMEGA_GAIN	2.0f
+#define AIRPLANE_CTRL_VEL_GAIN		1.0f
+#define AIRPLANE_CTRL_MIN_DIST		20.0f
+#define AIRPLANE_CTRL_TAXI_MIN_DIST	5.0f
+#define AIRPLANE_CTRL_VEL			15.0f
+#define AIRPLANE_CTRL_SIM_PERIOD	0.020f
+#define AIRPLANE_CTRL_VEL_TH		0.01f
 
 // ==================================================================
 //                     TRAJECTORY CONSTANTS
 // ==================================================================
 #define HOLDING_TRAJECTORY_SIZE 		30
-#define HOLDING_TRAJECTORY_STEP 		(2.0 * M_PI / HOLDING_TRAJECTORY_SIZE)
-#define HOLDING_TRAJECTORY_RADIUS 		60.0
-#define HOLDING_TRAJECTORY_ARM			100.0
-#define HOLDING_TRAJECTORY_X			-180.0
-#define HOLDING_TRAJECTORY_Y			180.0
+#define HOLDING_TRAJECTORY_RADIUS 		60.0f
+#define HOLDING_TRAJECTORY_ARM			100.0f
+#define HOLDING_TRAJECTORY_X			-180.0f
+#define HOLDING_TRAJECTORY_Y			180.0f
 // #define HOLDING_TRAJECTORY_VEL			15.0
-#define HOLDING_TRAJECTORY_VEL			50.0
+#define HOLDING_TRAJECTORY_VEL			50.0f
 
 #define RUNWAY_0_LANDING_TRAJ_SIZE		15
-#define RUNWAY_0_LANDING_TRAJ_START_X	-330.0
-#define RUNWAY_0_LANDING_TRAJ_START_Y	-140.0
-#define RUNWAY_0_LANDING_TRAJ_END_X		100.0
-#define RUNWAY_0_LANDING_TRAJ_END_Y		-140.0
-#define RUNWAY_0_LANDING_TRAJ_END_VEL	5.0
+#define RUNWAY_0_LANDING_TRAJ_START_X	-330.0f
+#define RUNWAY_0_LANDING_TRAJ_START_Y	-140.0f
+#define RUNWAY_0_LANDING_TRAJ_END_X		100.0f
+#define RUNWAY_0_LANDING_TRAJ_END_Y		-140.0f
+#define RUNWAY_0_LANDING_TRAJ_END_VEL	5.0f
 
 #define RUNWAY_1_LANDING_TRAJ_SIZE		10
-#define RUNWAY_1_LANDING_TRAJ_START_X	-330.0
-#define RUNWAY_1_LANDING_TRAJ_START_Y	-80.0
-#define RUNWAY_1_LANDING_TRAJ_END_X		100.0
-#define RUNWAY_1_LANDING_TRAJ_END_Y		-80.0
-#define RUNWAY_1_LANDING_TRAJ_END_VEL	5.0
+#define RUNWAY_1_LANDING_TRAJ_START_X	-330.0f
+#define RUNWAY_1_LANDING_TRAJ_START_Y	-80.0f
+#define RUNWAY_1_LANDING_TRAJ_END_X		100.0f
+#define RUNWAY_1_LANDING_TRAJ_END_Y		-80.0f
+#define RUNWAY_1_LANDING_TRAJ_END_VEL	5.0f
 
 #define TERMINAL_TRAJ_X		-190
 #define TERMINAL_TRAJ_Y		-238
 #define TERMINAL_TRAJ_VEL	0
 
-#define TAXI_TRAJ_VEL		10.0
-#define TAKEOFF_TRAJ_VEL	50.0
+#define TAXI_TRAJ_VEL		10.0f
+#define TAKEOFF_TRAJ_VEL	50.0f
 #define RUNWAY_0_TAKEOFF_TRAJ_SIZE		12
-#define RUNWAY_0_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0, -165.0, -140.0, -110.0, -110.0, -100.0,  -70.0,    0.0, 100.0,  280.0,  350.0}
-#define RUNWAY_0_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0, -190.0, -190.0, -160.0, -150.0, -140.0, -140.0, -140.0, -140.0, -140.0, -350.0}
+#define RUNWAY_0_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0f, -165.0f, -140.0f, -110.0f, -110.0f, -100.0f,  -70.0f,    0.0f, 100.0f,  280.0f,  350.0f}
+#define RUNWAY_0_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0f, -190.0f, -190.0f, -160.0f, -150.0f, -140.0f, -140.0f, -140.0f, -140.0f, -140.0f, -350.0f}
 #define RUNWAY_0_TAKEOFF_TRAJ_VELS		{TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL}
 
 #define RUNWAY_1_TAKEOFF_TRAJ_SIZE		14
-#define RUNWAY_1_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0, -165.0, -160.0, -160.0, -145.0, -125.0, -110.0, -100.0, -70.0,   0.0, 100.0,  280.0, 350.0}
-#define RUNWAY_1_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0, -190.0, -180.0, -125.0, -110.0, -110.0,  -95.0,  -80.0, -80.0, -80.0, -80.0, -80.0, 100.0}
+#define RUNWAY_1_TAKEOFF_TRAJ_XS		{TERMINAL_TRAJ_X, -190.0f, -165.0f, -160.0f, -160.0f, -145.0f, -125.0f, -110.0f, -100.0f, -70.0f,   0.0f, 100.0f,  280.0f, 350.0f}
+#define RUNWAY_1_TAKEOFF_TRAJ_YS		{TERMINAL_TRAJ_Y, -220.0f, -190.0f, -180.0f, -125.0f, -110.0f, -110.0f,  -95.0f,  -80.0f, -80.0f, -80.0f, -80.0f, -80.0f, 100.0f}
 #define RUNWAY_1_TAKEOFF_TRAJ_VELS		{TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAXI_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL, TAKEOFF_TRAJ_VEL}
 
 
@@ -104,15 +103,15 @@
 // ==================================================================
 //                     SPAWING AREA CONSTANTS
 // ==================================================================
-#define INBOUND_AREA_WIDTH		350.0
-#define INBOUND_AREA_HEIGHT		350.0
-#define INBOUND_AREA_X			-20.0
-#define INBOUND_AREA_Y			0.0
+#define INBOUND_AREA_WIDTH		350.0f
+#define INBOUND_AREA_HEIGHT		350.0f
+#define INBOUND_AREA_X			-20.0f
+#define INBOUND_AREA_Y			0.0f
 
-#define OUTBOUND_AREA_WIDTH		210.0
-#define OUTBOUND_AREA_HEIGHT	50.0
-#define OUTBOUND_AREA_X			-355.0
-#define OUTBOUND_AREA_Y			-305.0
+#define OUTBOUND_AREA_WIDTH		210.0f
+#define OUTBOUND_AREA_HEIGHT	50.0f
+#define OUTBOUND_AREA_X			-355.0f
+#define OUTBOUND_AREA_Y			-305.0f
 
 
 // ==================================================================
@@ -141,5 +140,12 @@
 // ==================================================================
 #define SUCCESS 0
 #define ERROR_GENERIC -1
+
+// ==================================================================
+//                            MATH CONSTANTS
+// ==================================================================
+// Redefinition of float math constants
+#define M_PI_F		3.14159265358979323846f
+#define M_PI_2_F	1.57079632679489661923f
 
 #endif

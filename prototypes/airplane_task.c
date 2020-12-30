@@ -128,7 +128,7 @@ void* airplane_task(void* arg) {
 void draw_airplane(const airplane_t* airplane, int color) {
 	int x = airplane->x + SCREEN_WIDTH/2.0;
 	int y = -airplane->y + SCREEN_HEIGHT/2.0;
-	float angle = (airplane->angle - M_PI_2);
+	float angle = (airplane->angle - M_PI_2_F);
 	draw_triangle(screen, x, y, AIRPLANE_SIZE, angle, color);
 }
 

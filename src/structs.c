@@ -1,3 +1,10 @@
+/*
+ * structs.c
+ * 
+ * Definition of the functions that work on the structures
+ * declared in the struct.h file
+ */
+
 #include <assert.h>
 
 #include "structs.h"
@@ -44,7 +51,7 @@ shared_airplane_t* airplane_pool_get_new(airplane_pool_t* pool) {
 void airplane_pool_free(airplane_pool_t* pool, shared_airplane_t* elem) {
 	// Checking if "elem" points to a valid location of the pool
 	assert(elem >= &(pool->elems[0]) && elem < &(pool->elems[AIRPLANE_POOL_SIZE]));
-	int i = elem - &pool->elems[0];		// Index of the element
+	long int i = elem - &pool->elems[0];		// Index of the element
 
 	pthread_mutex_lock(&pool->mutex);
 	// Updating the pool

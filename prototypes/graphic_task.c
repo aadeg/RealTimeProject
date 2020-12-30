@@ -85,7 +85,7 @@ void* graphic_task(void* arg) {
 	while (counter <= 1000) {
 		x = rand() % SCREEN_WIDTH;
 		y = rand() % SCREEN_HEIGHT;
-		angle = (float) (rand() % 360) / (2.0 * M_PI);
+		angle = (float) (rand() % 360) / (2.0 * M_PI_F;
 		draw_triangle(screen, x, y, 5, angle, 11);
 
 		textout_ex(status_box, font, str,

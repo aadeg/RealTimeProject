@@ -1,3 +1,9 @@
+/*
+ * graphics.h
+ * 
+ * Declaration of graphic-related functions
+ */
+
 #ifndef _GRAPHICS_H_
 #define _GRAPHICS_H_
 
@@ -10,14 +16,14 @@
 // ==================================================================
 //                           MAIN BOX
 // ==================================================================
-BITMAP* create_main_box();
+BITMAP* create_main_box(void);
 void clear_main_box(BITMAP* main_box);
 void blit_main_box(BITMAP* main_box);
 
 // ==================================================================
 //                         SIDEBAR BOX
 // ==================================================================
-BITMAP* create_sidebar_box();
+BITMAP* create_sidebar_box(void);
 void blit_sidebar_box(BITMAP* sidebar_box);
 void update_sidebar_box(BITMAP* sidebar_box,
 	shared_system_state_t* system_state,
@@ -31,12 +37,12 @@ void update_sidebar_tasks_state(BITMAP* sidebar_box,
 // ==================================================================
 //                        AIRPLANE GRAPHIC
 // ==================================================================
-void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys);
+void get_triangle_coord(float xc, float yc, float radius, float angle, int* xs, int* ys);
 void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 	int color);
 void rotate_point(float* x, float* y, float xc, float yc, 
 	float cos_angle, float sin_angle);
-void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y);
+void convert_coord_to_display(float src_x, float src_y, int* dst_x, int* dst_y);
 void draw_airplane(BITMAP* bitmap, const airplane_t* airplane);
 void draw_waypoint(BITMAP* bitmap, const waypoint_t* point);
 void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int color);

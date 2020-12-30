@@ -1,10 +1,16 @@
+/*
+ * graphics.c
+ * 
+ * Definition of graphic-related functions declared in graphics.h
+ */
+
 #include <stdio.h>
 #include <math.h>
 
 #include "graphics.h"
 #include "consts.h"
 
-#define SQRT_3		1.732050808
+#define SQRT_3		1.732050808f
 
 static BITMAP* main_bg_bitmap = NULL;	// background image of the main box
 
@@ -19,7 +25,7 @@ static int sidebar_box_tasks_state_y_end = 0;
 //                            MAIN BOX
 // =================================================================
 // Create and return a BITMAP containing the main scene
-BITMAP* create_main_box() {
+BITMAP* create_main_box(void) {
 	BITMAP* main_box = create_bitmap(MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
 	clear_main_box(main_box);
 	rect(main_box, 0, 0, MAIN_BOX_WIDTH - 1, MAIN_BOX_HEIGHT - 1,
@@ -52,7 +58,7 @@ void _sidebar_textout_ex(BITMAP* sidebar_box, const char* str, int y) {
 }
 
 // Create and return a BITMAP used as sidebar
-BITMAP* create_sidebar_box() {
+BITMAP* create_sidebar_box(void) {
 	BITMAP* sidebar_box = create_bitmap(SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
 	int y = SIDEBAR_BOX_PADDING;
 
@@ -176,13 +182,13 @@ void update_sidebar_tasks_state(BITMAP* sidebar_box,
 // in (xc, yc), inscribed in a circonference of radius "radius" and rotate 
 // by "angle" radiants. xs and ys are the 3-sized arrays that will the contain
 // the output of the function
-void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys) {	
+void get_triangle_coord(float xc, float yc, float radius, float angle, int* xs, int* ys) {	
 	// Computing the coordinates of the vertices 
-	float x1 = SQRT_3 * radius / 2.0 + xc;
-	float y1 = ((float) radius) / 2.0 + yc;
+	float x1 = SQRT_3 * radius / 2.0f + xc;
+	float y1 = (radius) / 2.0f + yc;
 	float x2 = xc;
 	float y2 = yc - radius;
-	float x3 =  -SQRT_3 * radius / 2.0 + xc;
+	float x3 =  -SQRT_3 * radius / 2.0f + xc;
 	float y3 = y1;
 
 	// Rotating the points
@@ -193,12 +199,12 @@ void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* y
 	rotate_point(&x3, &y3, xc, yc, cos_angle, sin_angle);
 
 	// Writing the output
-	xs[0] = roundf(x1);
-	xs[1] = roundf(x2);
-	xs[2] = roundf(x3);
-	ys[0] = roundf(y1);
-	ys[1] = roundf(y2);
-	ys[2] = roundf(y3);
+	xs[0] = (int) roundf(x1);
+	xs[1] = (int) roundf(x2);
+	xs[2] = (int) roundf(x3);
+	ys[0] = (int) roundf(y1);
+	ys[1] = (int) roundf(y2);
+	ys[2] = (int) roundf(y3);
 }
 
 // Draw an equilateral triangle cented in (xc, yc), inscribed in a circonference
@@ -209,7 +215,8 @@ void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
 	int xs[3];
 	int ys[3];
 
-	get_triangle_coord(xc, yc, radius, angle, xs, ys);
+	get_triangle_coord((float) xc, (float) yc, (float) radius, (float) angle,
+		xs, ys);
 	triangle(bitmap, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2], color);
 }
 
@@ -234,16 +241,16 @@ void rotate_point(float* x, float* y, float xc, float yc,
 }
 
 // Convert the cartisian coordinates in screen coordinates
-void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
-	*dst_x = src_x + SCREEN_HEIGHT/2.0;
-	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
+void convert_coord_to_display(float src_x, float src_y, int* dst_x, int* dst_y) {
+	*dst_x = ((int) roundf(src_x)) + SCREEN_HEIGHT / 2;
+	*dst_y = ((int) roundf(-src_y)) + SCREEN_HEIGHT / 2;
 }
 
 // Draw an airplane to "bitmap"
 void draw_airplane(BITMAP* bitmap, const airplane_t* airplane) {
 	int x = 0;			// screen x-coordinate
 	int y = 0;			// screen y-coordinate
-	float angle = (airplane->angle - M_PI_2);
+	float angle = (airplane->angle - M_PI_2_F);
 	int airplane_color = get_airplane_color(airplane);
 
 	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
@@ -288,7 +295,7 @@ bool get_keycodes(char* scan, char* ascii) {
 		return false;
 	
 	key = readkey();		// block until a key is pressed
-	*ascii = (char) key & 0xFF;
+	*ascii = (char) (key & 0xFF);
 	*scan = (char) (key >> 8);
 	return true;
 }

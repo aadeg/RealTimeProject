@@ -23,7 +23,7 @@
 
 #define MAX_WAYPOINTS 			50
 #define TRAJECTORY_POINTS 		30
-#define TRAJECTORY_STEP 		2.0 * M_PI / TRAJECTORY_POINTS
+#define TRAJECTORY_STEP 		2.0 * M_PI_F/ TRAJECTORY_POINTS
 #define TRAJECTORY_RADIUS 		70
 
 #define AIRPLANE_CTRL_OMEGA_GAIN	0.8
@@ -100,7 +100,7 @@ void init_trajectory() {
 	for (i = 0; i < TRAJECTORY_POINTS; ++i) {
 		point = &trajectory.waypoints[i];
 		point->x = TRAJECTORY_RADIUS * cosf(s);
-		if (s < M_PI_2 ||s >= 3.0 * M_PI_2) point->x += 100;
+		if (s < M_PI_2_F ||s >= 3.0 * M_PI_2_F) point->x += 100;
 		else point->x -= 40;
 		point->y = TRAJECTORY_RADIUS * sinf(s);
 		point->angle = s + M_PI;
@@ -254,7 +254,7 @@ void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
 void draw_airplane(const airplane_t* airplane, int color) {
 	int x = 0;
 	int y = 0;
-	float angle = (airplane->angle - M_PI_2);
+	float angle = (airplane->angle - M_PI_2_F);
 	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
 	draw_triangle(screen, x, y, AIRPLANE_SIZE, angle, color);
 }
