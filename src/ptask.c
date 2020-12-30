@@ -11,25 +11,14 @@
 #define MIN_PRIORITY 0
 #define MAX_PRIORITY 99
 
-/*
- =================================================================
-												TASK FUNCTIONS
- =================================================================
-*/
-
-// Initializes the task_info struct
-//
-// task_num: 		task id number choose by the user of the function
-// period_ms: 	task period (ms)
-// deadline_ms:	relative deadline (ms)
-// priority:		in [0, 99]
-//
-// return SUCCESS or ERROR_GENERIC
-int task_info_init(
-		struct task_info* task,
-		int task_num,
-		int period_ms, int deadline_ms,	int priority) {
-	// Checking the arguments
+// ==================================================================
+//                         TASK FUNCTIONS
+// ==================================================================
+// Initialize the task_info structure
+// Return SUCCESS or ERROR_GENERIC
+int task_info_init(task_info_t* task,
+		int task_num, int period_ms, int deadline_ms, int priority) {
+	// checking the arguments
 	if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) return ERROR_GENERIC;
 	if (period_ms <= 0 || deadline_ms <= 0) return ERROR_GENERIC;
 	
@@ -43,9 +32,9 @@ int task_info_init(
 	return SUCCESS;
 }
 
-// Checks whether or not a deadline miss has occurred
-// return true if a deadline miss has occurred
-int task_deadline_missed(struct task_info* task) {
+// Check whether or not a deadline miss has occurred
+// Return true if a deadline miss has occurred
+int task_deadline_missed(task_info_t* task) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	
@@ -57,8 +46,8 @@ int task_deadline_missed(struct task_info* task) {
 }
 
 // Set the next activation time and the absolute deadline
-// return SUCCESS or ERROR_GENERIC
-int task_set_activation(struct task_info* task) {
+// Return SUCCESS or ERROR_GENERIC
+int task_set_activation(task_info_t* task) {
 	int err;
 	struct timespec now;
 
@@ -74,8 +63,8 @@ int task_set_activation(struct task_info* task) {
 }
 
 // Suspend the task until the next activation
-// return SUCCESS or ERROR_GENERIC
-int task_wait_for_activation(struct task_info* task) {
+// Return SUCCESS or ERROR_GENERIC
+int task_wait_for_activation(task_info_t* task) {
 	int err;
 
 	err = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME,
@@ -87,14 +76,14 @@ int task_wait_for_activation(struct task_info* task) {
 	return SUCCESS;
 }
 
-// Creates a new task using with SCHED_FIFO as scheduler
-// return SUCCESS or ERROR_GENERIC
-int task_create(struct task_info* task_info, void* (*func)(void*)) {
+// Create a new task using with SCHED_FIFO as scheduler
+// Return SUCCESS or ERROR_GENERIC
+int task_create(task_info_t* task_info, void* (*func)(void*)) {
 	int err;
 	pthread_attr_t attr;
 	struct sched_param s_param;
 
-	// Setting pthread attributes
+	// setting pthread attributes
 	s_param.sched_priority = task_info->priority;
 	err = pthread_attr_init(&attr);
 	if (err) return ERROR_GENERIC;
@@ -103,32 +92,30 @@ int task_create(struct task_info* task_info, void* (*func)(void*)) {
 	if (!err) err |= pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 	if (!err) err |= pthread_attr_setschedparam(&attr, &s_param);
 
-	// Creating the thread
+	// creating the thread
 	if (!err) err |= pthread_create(&task_info->thread_id, &attr, func, task_info);
 
-	// Cleanup
+	// cleanup
 	err |= pthread_attr_destroy(&attr);
 	return (err) ? ERROR_GENERIC : SUCCESS;
 }
 
 // Join a task as using pthread_joint
 // return the value returned by pthread_join
-int task_join(struct task_info* task_info, void** return_value) {
+int task_join(task_info_t* task_info, void** return_value) {
 	return pthread_join(task_info->thread_id, return_value);
 }
 
-/*
- =================================================================
-										TIME MANAGEMENT FUNCTIONS
- =================================================================
-*/
-// Copies a struct timespec from des to src
+// ==================================================================
+//                    TIME MANAGEMENT FUNCTIONS
+// ==================================================================
+// Copy a struct timespec from des to src
 void time_copy(struct timespec* des, const struct timespec* src) {
 	des->tv_sec = src->tv_sec;
 	des->tv_nsec = src->tv_nsec;
 }
 
-// Adds msec to time
+// Add msec to time
 void time_add_ms(struct timespec* time, int msec) {
 	time->tv_sec += msec / MS_IN_SEC;
 	time->tv_nsec += (msec % MS_IN_SEC) * NSEC_IN_MS;
