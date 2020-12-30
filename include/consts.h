@@ -33,10 +33,10 @@
 // Airplane
 #define AIRPLANE_SIZE			10
 #define AIRPLANE_COLOR			15
-#define AIRPLANE_BORDER_COLOR	0
 #define AIRPLANE_RUNWAY_COLOR	12
 #define AIRPLANE_TRAIL_COLOR	10
 #define TRAIL_COLOR				2
+#define WAYPOINT_RADIUS			2
 
 // ==================================================================
 //                     AIRPLANE TASK CONSTANTS
@@ -124,6 +124,7 @@
 #define MAX_WAYPOINTS 			50
 #define AIRPLANE_QUEUE_LENGTH	(MAX_AIRPLANE + 1)
 #define TASK_NAME_LENGTH		30
+#define SIDEBAR_STR_LENGTH		40
 
 // ==================================================================
 //                     SCHEDULING CONSTANTS

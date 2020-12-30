@@ -165,7 +165,7 @@ void* graphic_task(void* arg) {
 			draw_airplane(main_box, airplane);
 			if (show_next_waypoint) {
 				des_point = trajectory_get_point(airplane->des_traj, airplane->traj_index);
-				if (des_point) draw_point(main_box, des_point, 4);
+				if (des_point) draw_waypoint(main_box, des_point, 4);
 			}
 		}
 
@@ -935,7 +935,7 @@ void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 		trails_updated[airplane->unique_id] = true;
 		update_airplane_trail(airplane, trail);
 		if (show_trails)
-			draw_trail(bitmap, trail, TRAIL_BUFFER_LENGTH, TRAIL_COLOR);
+			draw_trail(bitmap, trail, TRAIL_COLOR);
 	}
 
 	// Resetting unused trail buffers

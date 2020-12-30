@@ -4,24 +4,21 @@
 #include "graphics.h"
 #include "consts.h"
 
-#define CHAR_SPACING 8
-#define CHAR_CURSOR '_'
-
 #define SQRT_3		1.732050808
 
-static BITMAP* bg_bitmap = NULL;
+static BITMAP* main_bg_bitmap = NULL;	// background image of the main box
+
+// Sidebar sections limits
 static int sidebar_box_system_state_y_start = 0;
 static int sidebar_box_system_state_y_end = 0;
 static int sidebar_box_tasks_state_y_start = 0;
 static int sidebar_box_tasks_state_y_end = 0;
 
 
-
-int cbuffer_next_index(cbuffer_t* buffer);
-
 // ==================================================================
 //                            MAIN BOX
-// ==================================================================
+// =================================================================
+// Create and return a BITMAP containing the main scene
 BITMAP* create_main_box() {
 	BITMAP* main_box = create_bitmap(MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
 	clear_main_box(main_box);
@@ -30,12 +27,14 @@ BITMAP* create_main_box() {
 	return main_box;
 }
 
+// Clear the main box bitmap with the background image
 void clear_main_box(BITMAP* main_box) {
-	if (bg_bitmap == NULL)
-		bg_bitmap = load_bitmap("assets/background.bmp", NULL);
-	blit(bg_bitmap, main_box, 0, 0, 0, 0, MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
+	if (main_bg_bitmap == NULL)
+		main_bg_bitmap = load_bitmap("assets/background.bmp", NULL);
+	blit(main_bg_bitmap, main_box, 0, 0, 0, 0, MAIN_BOX_WIDTH, MAIN_BOX_HEIGHT);
 }
 
+// Draw the main box to the screen
 void blit_main_box(BITMAP* main_box) {
 	rect(main_box, 0, 0, MAIN_BOX_WIDTH - 1, MAIN_BOX_HEIGHT - 1,
 		MAIN_COLOR);
@@ -46,6 +45,13 @@ void blit_main_box(BITMAP* main_box) {
 // ==================================================================
 //                         SIDEBAR BOX
 // ==================================================================
+// Internal utility function
+void _sidebar_textout_ex(BITMAP* sidebar_box, const char* str, int y) {
+	textout_ex(sidebar_box, font, str, SIDEBAR_BOX_PADDING, y,
+		MAIN_COLOR, BG_COLOR);
+}
+
+// Create and return a BITMAP used as sidebar
 BITMAP* create_sidebar_box() {
 	BITMAP* sidebar_box = create_bitmap(SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
 	int y = SIDEBAR_BOX_PADDING;
@@ -54,109 +60,111 @@ BITMAP* create_sidebar_box() {
 	rect(sidebar_box, 0, 0, SIDEBAR_BOX_WIDTH - 1, SIDEBAR_BOX_HEIGHT - 1,
 		MAIN_COLOR);
 
-	textout_ex(sidebar_box, font, "KEYBOARD COMMANDS",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	// Keyboard commands
+	_sidebar_textout_ex(sidebar_box, "KEYBOARD COMMANDS", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
-	textout_ex(sidebar_box, font, "I: spawn an Inbound airplane",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, "I: spawn an Inbound airplane", y);
 	y += SIDEBAR_BOX_VSPACE;
-	textout_ex(sidebar_box, font, "O: spawn an Outbound airplane",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, "O: spawn an Outbound airplane", y);
 	y += SIDEBAR_BOX_VSPACE;
-	textout_ex(sidebar_box, font, "T: show / hide trails",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, "T: show / hide trails", y);
 	y += SIDEBAR_BOX_VSPACE;
-	textout_ex(sidebar_box, font, "W: show / hide next waypoint",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, "W: show / hide next waypoint", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
 	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
 	y += SIDEBAR_BOX_PADDING;
-	textout_ex(sidebar_box, font, "SYSTEM STATE",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+
+	// System state
+	_sidebar_textout_ex(sidebar_box, "SYSTEM STATE", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
-	
 	sidebar_box_system_state_y_start = y;
 	y += 3 * SIDEBAR_BOX_VSPACE;
 	sidebar_box_system_state_y_end = y;
 	y += SIDEBAR_BOX_PADDING;
-
 	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
 	y += SIDEBAR_BOX_PADDING;
-	textout_ex(sidebar_box, font, "TASKS STATE",
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+
+	// Task state
+	_sidebar_textout_ex(sidebar_box, "TASKS STATE", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
 	sidebar_box_tasks_state_y_start = y;
-	
-
 	sidebar_box_tasks_state_y_end = SIDEBAR_BOX_HEIGHT - SIDEBAR_BOX_PADDING;
+
 	return sidebar_box;
 }
 
+// Draw the sidebar box to the screen
 void blit_sidebar_box(BITMAP* sidebar_box) {
 	blit(sidebar_box, screen, 0, 0, SIDEBAR_BOX_X, SIDEBAR_BOX_Y,
 		SIDEBAR_BOX_WIDTH, SIDEBAR_BOX_HEIGHT);
 }
 
+// Update the sidebar box with the new information
 void update_sidebar_box(BITMAP* sidebar_box, shared_system_state_t* system_state,
 		task_state_t* task_states, const int task_states_size) {
 	update_sidebar_system_state(sidebar_box, system_state);
 	update_sidebar_tasks_state(sidebar_box, task_states, task_states_size);
 }
 
+// Update the system state in the sidebar box
 void update_sidebar_system_state(BITMAP* sidebar_box,
 		shared_system_state_t* system_state) {
-	char str[40] = { 0 };
+	char str[SIDEBAR_STR_LENGTH] = { 0 };
 	int i = 0;
-	int y = sidebar_box_system_state_y_start;
+	int y = sidebar_box_system_state_y_start;	// text y-coordinate
 	system_state_t local_system_state;
 
 	pthread_mutex_lock(&system_state->mutex);
 	local_system_state = system_state->state;
 	pthread_mutex_unlock(&system_state->mutex);
 
+	// Clearing the old information
 	rect(sidebar_box,
 		SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_start, 
 		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_end,
 		BG_COLOR);
 
+	// Writing the number of airplanes in the system
 	sprintf(str, "Airplanes:  %02d / %02d", local_system_state.n_airplanes, MAX_AIRPLANE);
-	textout_ex(sidebar_box, font, str,
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, str, y);
 	y += SIDEBAR_BOX_VSPACE;
+
+	// Writing the state of the runways
 	for (i = 0; i < N_RUNWAYS; ++i) {
 		if (local_system_state.is_runway_free[i])
 			sprintf(str, "Runway %d:   %s", i + 1, "free");
 		else
 			sprintf(str, "Runway %d:   %s", i + 1, "busy");
-		textout_ex(sidebar_box, font, str,
-			SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+		_sidebar_textout_ex(sidebar_box, str, y);
 		y += SIDEBAR_BOX_VSPACE;
 	}
 }
 
+// Update the task states in the sidebar box
 void update_sidebar_tasks_state(BITMAP* sidebar_box,
 		task_state_t* task_states, const int task_states_size) {
-	char str[40] = { 0 };
+	char str[SIDEBAR_STR_LENGTH] = { 0 };
 	int i = 0;
-	int y = sidebar_box_tasks_state_y_start;
-	char state;
+	int y = sidebar_box_tasks_state_y_start;	// text y-coordinate
+	char state;									// state of the task
 
+	// Clearing the old information
 	rect(sidebar_box,
 		SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
 		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
 		BG_COLOR);
 
+	// Writing columns header
 	sprintf(str, "%-16s %3s %3s", "", "sts", "dlm");
-	textout_ex(sidebar_box, font, str,
-		SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+	_sidebar_textout_ex(sidebar_box, str, y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
 
+	// Writing the state of each task
 	for (i = 0; i < task_states_size; ++i) {
 		state = task_states[i].is_running ? 'R' : 'S';
 		sprintf(str, "%-16s  %c  %3d",
 			task_states[i].str, state, task_states[i].deadline_miss);
-		textout_ex(sidebar_box, font, str,
-			SIDEBAR_BOX_PADDING, y, MAIN_COLOR, BG_COLOR);
+		_sidebar_textout_ex(sidebar_box, str, y);
 		y += SIDEBAR_BOX_VSPACE;
 	}
 }
@@ -164,18 +172,27 @@ void update_sidebar_tasks_state(BITMAP* sidebar_box,
 // ==================================================================
 //                        AIRPLANE GRAPHIC
 // ==================================================================
-void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys) {
-	float sin_angle = sinf(angle);
-	float cos_angle = cosf(angle);
+// Compute the coordinates of the 3 points of a equilateral triangle centered 
+// in (xc, yc), inscribed in a circonference of radius "radius" and rotate 
+// by "angle" radiants. xs and ys are the 3-sized arrays that will the contain
+// the output of the function
+void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* ys) {	
+	// Computing the coordinates of the vertices 
 	float x1 = SQRT_3 * radius / 2.0 + xc;
 	float y1 = ((float) radius) / 2.0 + yc;
 	float x2 = xc;
 	float y2 = yc - radius;
 	float x3 =  -SQRT_3 * radius / 2.0 + xc;
 	float y3 = y1;
+
+	// Rotating the points
+	float sin_angle = sinf(angle);
+	float cos_angle = cosf(angle);
 	rotate_point(&x1, &y1, xc, yc, cos_angle, sin_angle);
 	rotate_point(&x2, &y2, xc, yc, cos_angle, sin_angle);
 	rotate_point(&x3, &y3, xc, yc, cos_angle, sin_angle);
+
+	// Writing the output
 	xs[0] = roundf(x1);
 	xs[1] = roundf(x2);
 	xs[2] = roundf(x3);
@@ -184,63 +201,73 @@ void get_triangle_coord(int xc, int yc, int radius, float angle, int* xs, int* y
 	ys[2] = roundf(y3);
 }
 
+// Draw an equilateral triangle cented in (xc, yc), inscribed in a circonference
+// of radius "radius" and titled rotated by "angle" radiants.
 void draw_triangle(BITMAP* bitmap, int xc, int yc, int radius, float angle,
-		int color, int border_color) {
+		int color) {
+	// Arrays containing the coordinates of the vertices
 	int xs[3];
 	int ys[3];
+
 	get_triangle_coord(xc, yc, radius, angle, xs, ys);
 	triangle(bitmap, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2], color);
 }
 
+// Rotate a point (x, y) around (xc, yc). The rotation angle is defined by
+// "cos_angle" and "sin_angle"
 void rotate_point(float* x, float* y, float xc, float yc, 
 		float cos_angle, float sin_angle) {
-	float tmp_x;
+	float tmp_x;	// Temp. variable to store x value
+
+	// Shifting (x, y) by (xc, yc)
 	*x -= xc;
 	*y -= yc;
 	tmp_x = *x;
 
+	// Rotation
 	*x = cos_angle * tmp_x + sin_angle * (*y);
 	*y = -sin_angle * tmp_x + cos_angle * (*y);
 	
+	// Shifting back (x, y)
 	*x += xc;
 	*y += yc;
 }
 
+// Convert the cartisian coordinates in screen coordinates
 void convert_coord_to_display(int src_x, int src_y, int* dst_x, int* dst_y) {
 	*dst_x = src_x + SCREEN_HEIGHT/2.0;
 	*dst_y = -src_y + SCREEN_HEIGHT/2.0;
 }
 
+// Draw an airplane to "bitmap"
 void draw_airplane(BITMAP* bitmap, const airplane_t* airplane) {
-	int x = 0;
-	int y = 0;
+	int x = 0;			// screen x-coordinate
+	int y = 0;			// screen y-coordinate
 	float angle = (airplane->angle - M_PI_2);
 	int airplane_color = get_airplane_color(airplane);
 
 	convert_coord_to_display(airplane->x, airplane->y, &x, &y);
-	draw_triangle(bitmap, x, y, AIRPLANE_SIZE, angle, airplane_color, AIRPLANE_BORDER_COLOR);
+	draw_triangle(bitmap, x, y, AIRPLANE_SIZE, angle, airplane_color);
 }
 
-void draw_point(BITMAP* bitmap, const waypoint_t* point, int color) {
-	int x = 0;
-	int y = 0;
+// Draw a waypoint to "bitmap"
+void draw_waypoint(BITMAP* bitmap, const waypoint_t* point, int color) {
+	int x = 0;			// screen x-coordinate
+	int y = 0;			// screen y-coordinate
 	convert_coord_to_display(point->x, point->y, &x, &y);
-	circlefill(bitmap, x, y, 2, color);
+	circlefill(bitmap, x, y, WAYPOINT_RADIUS, color);
 }
 
-
-void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int n, int color) {
+// Draw the trail of an airplane to "bitmap"
+void draw_trail(BITMAP* bitmap, const cbuffer_t* trails, int color) {
 	int i = 0;
-	int idx = 0;
 	
-	if (n > TRAIL_BUFFER_LENGTH) n = TRAIL_BUFFER_LENGTH;
-	
-	for (i = 0; i < n; ++i) {
-		idx = (trails->top + TRAIL_BUFFER_LENGTH - i) % TRAIL_BUFFER_LENGTH;
-		putpixel(bitmap, trails->points[idx].x, trails->points[idx].y, color);
+	for (i = 0; i < TRAIL_BUFFER_LENGTH; ++i) {
+		putpixel(bitmap, trails->points[i].x, trails->points[i].y, color);
 	}
 }
 
+// Return the airplane color based on the airplane status
 int get_airplane_color(const airplane_t* airplane) {
 	enum airplane_status status = airplane->status;
 	if (status == INBOUND_LANDING || status == OUTBOUND_TAKEOFF)
@@ -252,58 +279,8 @@ int get_airplane_color(const airplane_t* airplane) {
 // ==================================================================
 //                          KEYBOARD
 // ==================================================================
-void print_char(char c, int x, int y, int color, int bg_color,
-		bool with_cursor) {
-	char str[3] = { '\0', '\0', '\0' };
-
-	str[0] = c;
-	if (with_cursor)
-		str[1] = CHAR_CURSOR;
-
-	textout_ex(screen, font, str, x, y, color, bg_color);
-}
-
-void clear_char(char c, int x, int y, int color, int bg_color,
-		bool with_cursor) {
-	char str[3] = { '\0', '\0', '\0' };
-
-	str[0] = c;
-	if (with_cursor)
-		str[1] = CHAR_CURSOR;
-	
-	textout_ex(screen, font, str, x, y, bg_color, bg_color);
-
-	str[0] = CHAR_CURSOR;
-	str[1] = '\0';
-	textout_ex(screen, font, str, x, y, color, bg_color);
-}
-
-void blink_cursor(int x, int y, int color, int bg_color) {
-	static int counter = 0;
-	static bool visible = true;
-
-	char str[2] = {CHAR_CURSOR, '\0'};
-
-	if (counter == 0 && visible) {
-		textout_ex(screen, font, str, x, y, bg_color, bg_color);
-		visible = false;
-	} else if (counter == 0 && !visible) {
-		textout_ex(screen, font, str, x, y, color, bg_color);
-		visible = true;
-	}
-
-	if (counter == 0) {
-		printf("here\n");
-		counter = 50000000;
-	}
-
-	--counter;
-}
-
-// get_keycodes puts the scan number and the ascii code of the
-// key pressed, if any.
-// scan and ascii are valid only when true is returned.
-// return true if a key is pressed, otherwise false.
+// Put the scan number and the ascii code of the key pressed in "scan" and
+// "ascii". "scan" and "ascii" are valid only when true is returned.
 bool get_keycodes(char* scan, char* ascii) {
 	int key;
 	
@@ -314,61 +291,4 @@ bool get_keycodes(char* scan, char* ascii) {
 	*ascii = (char) key & 0xFF;
 	*scan = (char) (key >> 8);
 	return true;
-}
-
-// input_string reads a string written via the keyboard
-//
-// dest_str:	result of the input
-// n_str:     max dimension of the input string (null char excluded)
-// x:					x-coord of the textbox area
-// y:					y-coord of the textbox area
-// color:			color of the text
-// bg_color:	color of the background
-//
-// return SUCCESS or ERROR_GENERIC
-int input_string(char* dest_str, int n_str,
-		int x, int y, int color, int bg_color) {
-	// Checking the arguments
-	if (n_str <= 0) return ERROR_GENERIC;
-
-	bool got_key = false;								// true if get_keycodes read a new key
-	char ascii, scan;										// returned by get_keycodes
-	int i = 0;													// next char index
-	bool with_cursor = true;
-
-	print_char(CHAR_CURSOR, x, y, color, bg_color, false);
-
-	do {
-		got_key = get_keycodes(&scan, &ascii);
-		
-		if (got_key && scan == KEY_BACKSPACE && i > 0) {
-			// clearing the last character
-			with_cursor = i < n_str;
-			x -= CHAR_SPACING;
-			clear_char(dest_str[i - 1], x, y, color, bg_color, with_cursor);
-			--i;
-			
-		} else if (got_key && i < n_str && 
-		           scan != KEY_ENTER && scan != KEY_BACKSPACE) {
-			// printing the new character
-			with_cursor = (i + 1) < n_str;
-			print_char(ascii, x, y, color, bg_color, with_cursor);
-			x += CHAR_SPACING;
-			dest_str[i] = ascii;
-			++i;
-		
-		} else if (i < n_str) {
-			blink_cursor(x, y, color, bg_color);
-		}
-
-	} while (scan != KEY_ENTER);
-
-	return SUCCESS;
-}
-
-int textarea_prompt(char* dest_str, int n_str, int x, int y,
-		const struct textarea_attr_t* attr) {
-  rectfill(screen, x, y, x + attr->width, y + attr->height, attr->bg_color);
-	return input_string(dest_str, n_str,
-			x + attr->left_border, y + attr->top_border, attr->color, attr->bg_color);
 }
