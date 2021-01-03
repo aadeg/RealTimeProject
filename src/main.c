@@ -343,8 +343,7 @@ void init_holding_trajectory(void) {
 		point->y = HOLDING_TRAJECTORY_RADIUS * sinf(s);
 		point->y += HOLDING_TRAJECTORY_Y;
 
-		// angle and velocity		
-		point->angle = s + M_PI_F;
+		// velocity
 		point->vel = HOLDING_TRAJECTORY_VEL;
 
 		s += step;

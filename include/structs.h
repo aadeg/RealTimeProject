@@ -29,7 +29,6 @@ enum airplane_status {
 typedef struct {
 	float x;		// x cartesian coordinate
 	float y;		// y cartesian coordinate
-	float angle;	// in radiants
 	float vel;		// velocity
 } waypoint_t;
 
