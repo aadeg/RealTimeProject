@@ -92,6 +92,7 @@ typedef struct {
 typedef struct {
 	int n_airplanes;					// number of airplanes in the system
 	bool is_runway_free[N_RUNWAYS];		// state of the runways
+	bool random_gen_enabled;			// state of the random generation
 } system_state_t;
 
 typedef struct {

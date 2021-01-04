@@ -43,6 +43,7 @@ task_state_t task_states[N_TASKS];
 
 bool show_trails = true;
 bool show_next_waypoint = false;
+bool enable_random_gen = false;
 bool end_all = false;			// true if the program should terminate
 
 
@@ -56,18 +57,20 @@ void init_landing_trajectories(void);
 void init_takeoff_trajectories(void);
 void init_terminal_trajectory(void);
 void init_task_states(void);
+void init_system_state(void);
 
 // Task functions
 void* graphic_task(void* arg);
 void* airplane_task(void* arg);
 void* traffic_controller_task(void* arg);
 void* input_task(void* arg);
+void* random_gen_task(void* arg);
 
 // Task related functions
 void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
-	task_info_t* traffic_ctrl_task_info);
+	task_info_t* traffic_ctrl_task_info, task_info_t* random_gen_task_info);
 void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
-	task_info_t* traffic_ctrl_task_info);
+	task_info_t* traffic_ctrl_task_info, task_info_t* random_gen_task_info);
 
 // Airplane spawning functions
 void spawn_inbound_airplane(void);
@@ -97,6 +100,7 @@ void handle_trails(BITMAP* bitmap, airplane_t* airplanes, int n_airplanes,
 	cbuffer_t* trails, bool show_trails);
 void toggle_trails(void);
 void toggle_next_waypoint(void);
+void toggle_random_gen(void);
 
 // Utility functions
 void update_task_states(const task_info_t* task_info);
@@ -112,10 +116,13 @@ int main(void) {
 	task_info_t graphic_task_info;
 	task_info_t input_task_info;
 	task_info_t traffic_ctlr_task_info;
+	task_info_t random_gen_task_info;
 
 	init();
-	create_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
-	join_tasks(&graphic_task_info, &input_task_info, &traffic_ctlr_task_info);
+	create_tasks(&graphic_task_info, &input_task_info,
+		&traffic_ctlr_task_info, &random_gen_task_info);
+	join_tasks(&graphic_task_info, &input_task_info,
+		&traffic_ctlr_task_info, &random_gen_task_info);
 
 	// Ensure correct deallocation of the airplanes
 	assert(airplane_pool.n_free == AIRPLANE_POOL_SIZE);
@@ -276,6 +283,8 @@ void* input_task(void* arg) {
 			toggle_trails();
 		} else if (got_key && scan == KEY_W) {
 			toggle_next_waypoint();
+		} else if (got_key && scan == KEY_R) {
+			toggle_random_gen();
 		}
 
 		// Ending task instance
@@ -289,6 +298,40 @@ void* input_task(void* arg) {
 	printf("Exiting...\n");
 	task_states[task_info->task_num].is_running = false;
 	end_all = true;
+	return NULL;
+}
+
+
+// ==================================================================
+//                     RANDOM GENERATION TASK
+// ==================================================================
+void* random_gen_task(void* arg) {
+	task_info_t* task_info = (task_info_t*) arg;
+	int rand_number = 0;
+
+	task_states[task_info->task_num].is_running = true;
+	task_set_activation(task_info);
+
+	while (!end_all) {
+		if (enable_random_gen) {
+			rand_number = rand();
+			// Equal probability to spawn an inbound or an outbound airplane
+			if (rand_number < RAND_MAX / 2) {
+				spawn_inbound_airplane();
+			} else {
+				spawn_outbound_airplane();
+			}
+		}
+
+		// Ending task instance
+		if (task_deadline_missed(task_info)) {
+			fprintf(stderr, "Traffic controller task deadline missed\n");
+		}
+		update_task_states(task_info);
+		task_wait_for_activation(task_info);
+	}
+
+	task_states[task_info->task_num].is_running = false;
 	return NULL;
 }
 
@@ -312,8 +355,8 @@ void init(void) {
 
 	airplane_queue_init(&airplane_queue);
 	airplane_pool_init(&airplane_pool);
-	pthread_mutex_init(&system_state.mutex, NULL);
 	init_task_states();
+	init_system_state();
 
 	srand(time(NULL));
 }
@@ -438,11 +481,24 @@ void init_task_states(void) {
 	strcpy(task_states[i].str, "Graphic:");
 	strcpy(task_states[i + 1].str, "Input:");
 	strcpy(task_states[i + 2].str, "Traffic Control:");
+	strcpy(task_states[i + 3].str, "Random Gen.:");
+}
+
+// Initialized the system state
+void init_system_state(void) {
+	system_state.state = (system_state_t) {
+		.is_runway_free = {true, true},
+		.n_airplanes =  0,
+		.random_gen_enabled = enable_random_gen
+	};
+	pthread_mutex_init(&system_state.mutex, NULL);
 }
 
 // Create and run the tasks
-void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
-		task_info_t* traffic_ctrl_task_info) {
+void create_tasks(task_info_t* graphic_task_info,
+		task_info_t* input_task_info,
+		task_info_t* traffic_ctrl_task_info,
+		task_info_t* random_gen_task_info) {
 	int err = 0;
 
 	// Creating graphic task
@@ -459,14 +515,22 @@ void create_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 
 	// Creating traffic controller task
 	task_info_init(traffic_ctrl_task_info, MAX_AIRPLANE + 2, 
-		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, PRIORITY - 2);
+		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, PRIORITY + 1);
 	err = task_create(traffic_ctrl_task_info, traffic_controller_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "traffic controller task", err);
+
+	// Creating random generation task
+	task_info_init(random_gen_task_info, MAX_AIRPLANE + 3,
+		RANDOM_GEN_PERIOD_MS, RANDOM_GEN_PERIOD_MS, PRIORITY + 2);
+	err = task_create(random_gen_task_info, random_gen_task);
+	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "random generation task", err);
 }
 
 // Join all the tasks
-void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
-		task_info_t* traffic_ctrl_task_info) {
+void join_tasks(task_info_t* graphic_task_info,
+		task_info_t* input_task_info,
+		task_info_t* traffic_ctrl_task_info,
+		task_info_t* random_gen_task_info) {
 	int err = 0;
 	int i = 0;
 
@@ -481,6 +545,10 @@ void join_tasks(task_info_t* graphic_task_info, task_info_t* input_task_info,
 	// Joining traffic controller task
 	err = task_join(traffic_ctrl_task_info, NULL);
 	if (err) fprintf(stderr, ERR_MSG_TASK_JOIN, "traffic controller", err);
+
+	// Joining traffic controller task
+	err = task_join(random_gen_task_info, NULL);
+	if (err) fprintf(stderr, ERR_MSG_TASK_JOIN, "random generation", err);
 
 	// Joining airplane tasks
 	for (i = 0; i < MAX_AIRPLANE; ++i) {
@@ -831,6 +899,15 @@ void toggle_trails(void) {
 
 void toggle_next_waypoint(void) {
 	show_next_waypoint = !show_next_waypoint;
+}
+
+void toggle_random_gen(void) {
+	enable_random_gen = !enable_random_gen;
+	
+	// Updating the system state
+	pthread_mutex_lock(&system_state.mutex);
+	system_state.state.random_gen_enabled = enable_random_gen;
+	pthread_mutex_unlock(&system_state.mutex);
 }
 
 void update_task_states(const task_info_t* task_info) {

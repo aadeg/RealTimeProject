@@ -69,13 +69,17 @@ BITMAP* create_sidebar_box(void) {
 	// Keyboard commands
 	_sidebar_textout_ex(sidebar_box, "KEYBOARD COMMANDS", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
-	_sidebar_textout_ex(sidebar_box, "I: spawn an Inbound airplane", y);
+	_sidebar_textout_ex(sidebar_box, "I:   spawn an Inbound airplane", y);
 	y += SIDEBAR_BOX_VSPACE;
-	_sidebar_textout_ex(sidebar_box, "O: spawn an Outbound airplane", y);
+	_sidebar_textout_ex(sidebar_box, "O:   spawn an Outbound airplane", y);
 	y += SIDEBAR_BOX_VSPACE;
-	_sidebar_textout_ex(sidebar_box, "T: show / hide trails", y);
+	_sidebar_textout_ex(sidebar_box, "R:   enable / disable random gen.", y);
 	y += SIDEBAR_BOX_VSPACE;
-	_sidebar_textout_ex(sidebar_box, "W: show / hide next waypoint", y);
+	_sidebar_textout_ex(sidebar_box, "T:   show / hide trails", y);
+	y += SIDEBAR_BOX_VSPACE;
+	_sidebar_textout_ex(sidebar_box, "W:   show / hide next waypoint", y);
+	y += SIDEBAR_BOX_VSPACE;
+	_sidebar_textout_ex(sidebar_box, "ESC: quit", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
 	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
 	y += SIDEBAR_BOX_PADDING;
@@ -84,7 +88,7 @@ BITMAP* create_sidebar_box(void) {
 	_sidebar_textout_ex(sidebar_box, "SYSTEM STATE", y);
 	y += SIDEBAR_BOX_VSPACE + SIDEBAR_BOX_PADDING;
 	sidebar_box_system_state_y_start = y;
-	y += 3 * SIDEBAR_BOX_VSPACE;
+	y += 4 * SIDEBAR_BOX_VSPACE;
 	sidebar_box_system_state_y_end = y;
 	y += SIDEBAR_BOX_PADDING;
 	line(sidebar_box, 0, y, SIDEBAR_BOX_WIDTH, y, MAIN_COLOR);
@@ -125,7 +129,7 @@ void update_sidebar_system_state(BITMAP* sidebar_box,
 	pthread_mutex_unlock(&system_state->mutex);
 
 	// Clearing the old information
-	rect(sidebar_box,
+	rectfill(sidebar_box,
 		SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_start, 
 		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_system_state_y_end,
 		BG_COLOR);
@@ -144,6 +148,13 @@ void update_sidebar_system_state(BITMAP* sidebar_box,
 		_sidebar_textout_ex(sidebar_box, str, y);
 		y += SIDEBAR_BOX_VSPACE;
 	}
+
+	// Writing the random generation state
+	if (local_system_state.random_gen_enabled)
+		strcpy(str, "Random gen: enabled");
+	else
+		strcpy(str, "Random gen: disabled");
+	_sidebar_textout_ex(sidebar_box, str, y);
 }
 
 // Update the task states in the sidebar box
@@ -155,7 +166,7 @@ void update_sidebar_tasks_state(BITMAP* sidebar_box,
 	char state;									// state of the task
 
 	// Clearing the old information
-	rect(sidebar_box,
+	rectfill(sidebar_box,
 		SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
 		SIDEBAR_BOX_WIDTH - SIDEBAR_BOX_PADDING, sidebar_box_tasks_state_y_end,
 		BG_COLOR);

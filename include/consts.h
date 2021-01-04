@@ -42,7 +42,6 @@
 // ==================================================================
 //                     AIRPLANE TASK CONSTANTS
 // ==================================================================
-// #define AIRPLANE_CTRL_OMEGA_GAIN	0.8
 #define AIRPLANE_CTRL_OMEGA_GAIN	2.0f
 #define AIRPLANE_CTRL_VEL_GAIN		1.0f
 #define AIRPLANE_CTRL_MIN_DIST		20.0f
@@ -59,7 +58,6 @@
 #define HOLDING_TRAJECTORY_ARM			100.0f
 #define HOLDING_TRAJECTORY_X			-180.0f
 #define HOLDING_TRAJECTORY_Y			180.0f
-// #define HOLDING_TRAJECTORY_VEL			15.0
 #define HOLDING_TRAJECTORY_VEL			50.0f
 
 #define RUNWAY_0_LANDING_TRAJ_SIZE		15
@@ -97,7 +95,6 @@
 //               AIR TRAFFIC CONTROLLER TASK CONSTANTS
 // ==================================================================
 #define N_RUNWAYS		2
-#define FREE_RUNWAY		-1
 
 
 // ==================================================================
@@ -119,7 +116,7 @@
 // ==================================================================
 #define MAX_AIRPLANE			30
 #define AIRPLANE_POOL_SIZE		MAX_AIRPLANE
-#define N_TASKS					(MAX_AIRPLANE + 3)
+#define N_TASKS					(MAX_AIRPLANE + 4)
 #define TRAIL_BUFFER_LENGTH		50
 #define MAX_WAYPOINTS 			50
 #define AIRPLANE_QUEUE_LENGTH	(MAX_AIRPLANE + 1)
@@ -133,6 +130,7 @@
 #define INPUT_PERIOD_MS			30
 #define AIRPLANE_PERIOD_MS 		20
 #define TRAFFIC_CTRL_PERIOD_MS	5
+#define RANDOM_GEN_PERIOD_MS	2000
 #define PRIORITY      			50
 
 // ==================================================================
