@@ -38,6 +38,13 @@ int task_wait_for_activation(task_info_t* task);
 int task_create(task_info_t* task, void* (*func)(void*));
 int task_join(task_info_t* task, void** return_value);
 
+
+// ==================================================================
+//                    		MUTEX FUNCTIONS
+// ==================================================================
+void ptask_mutex_init(pthread_mutex_t* mutex);
+
+
 // ==================================================================
 //                    TIME MANAGEMENT FUNCTIONS
 // ==================================================================

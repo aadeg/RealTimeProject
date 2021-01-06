@@ -491,7 +491,7 @@ void init_system_state(void) {
 		.n_airplanes =  0,
 		.random_gen_enabled = enable_random_gen
 	};
-	pthread_mutex_init(&system_state.mutex, NULL);
+	ptask_mutex_init(&system_state.mutex);
 }
 
 // Create and run the tasks
@@ -581,7 +581,7 @@ void spawn_inbound_airplane(void) {
 		.unique_id = new_airplane->airplane.unique_id,
 		.kill = false
 	};
-	pthread_mutex_init(&(new_airplane->mutex), NULL);
+	ptask_mutex_init(&(new_airplane->mutex));
 
 	run_new_airplane(new_airplane);
 }
@@ -610,7 +610,7 @@ void spawn_outbound_airplane(void) {
 		.unique_id = new_airplane->airplane.unique_id,
 		.kill = false
 	};
-	pthread_mutex_init(&(new_airplane->mutex), NULL);
+	ptask_mutex_init(&(new_airplane->mutex));
 
 	run_new_airplane(new_airplane);
 }

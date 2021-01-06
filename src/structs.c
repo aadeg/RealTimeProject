@@ -21,7 +21,7 @@ void airplane_pool_init(airplane_pool_t* pool) {
 		pool->is_free[i] = true;
 	}
 
-	pthread_mutex_init(&pool->mutex, NULL);
+	ptask_mutex_init(&pool->mutex);
 	pool->n_free = AIRPLANE_POOL_SIZE;
 }
 
@@ -67,7 +67,7 @@ void airplane_pool_free(airplane_pool_t* pool, shared_airplane_t* elem) {
 void airplane_queue_init(airplane_queue_t* queue) {
 	queue->top = 0;
 	queue->bottom = 0;
-	pthread_mutex_init(&queue->mutex, NULL);
+	ptask_mutex_init(&queue->mutex);
 }
 
 // Check if the queue is empty. Thread UNSAFE function. Internal use only

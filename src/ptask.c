@@ -11,6 +11,8 @@
 #include "ptask.h"
 #include "consts.h"
 
+#define _GNU_SOURCE
+
 #define MS_IN_SEC 1000
 #define NSEC_IN_MS 1000000
 #define NSEC_IN_SEC (MS_IN_SEC * NSEC_IN_MS)
@@ -112,6 +114,22 @@ int task_create(task_info_t* task_info, void* (*func)(void*)) {
 int task_join(task_info_t* task_info, void** return_value) {
 	return pthread_join(task_info->thread_id, return_value);
 }
+
+
+// ==================================================================
+//                    		MUTEX FUNCTIONS
+// ==================================================================
+// Initialize a pthread mutex with Priority Inheritance Protocol
+void ptask_mutex_init(pthread_mutex_t* mutex) {
+	pthread_mutexattr_t attr;
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+
+	pthread_mutex_init(mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
+}
+
 
 // ==================================================================
 //                    TIME MANAGEMENT FUNCTIONS
