@@ -126,12 +126,20 @@
 // ==================================================================
 //                     SCHEDULING CONSTANTS
 // ==================================================================
-#define GRAPHIC_PERIOD_MS		30
-#define INPUT_PERIOD_MS			30
 #define AIRPLANE_PERIOD_MS 		20
-#define TRAFFIC_CTRL_PERIOD_MS	5
+#define AIRPLANE_PRIORITY		50
+
+#define TRAFFIC_CTRL_PERIOD_MS	20
+#define TRAFFIC_CTRL_PRIORITY	50
+
+#define GRAPHIC_PERIOD_MS		30
+#define GRAPHIC_PRIORITY 		51
+
+#define INPUT_PERIOD_MS			30
+#define INPUT_PRIORITY 			52
+
 #define RANDOM_GEN_PERIOD_MS	2000
-#define PRIORITY      			50
+#define RANDOM_GEN_PRIORITY		53
 
 // ==================================================================
 //                     		UTILITIES

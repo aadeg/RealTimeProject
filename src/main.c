@@ -143,7 +143,7 @@ void* airplane_task(void* arg) {
 	task_states[task_info->task_num].is_running = true;
 	task_set_activation(task_info);
 
-	while (!end_all & !local_airplane.kill) {
+	while (!end_all && !local_airplane.kill) {
 		// Updating the local copy of the airplane struct
 		pthread_mutex_lock(&global_airplane_ptr->mutex);
 		local_airplane = global_airplane_ptr->airplane;
@@ -503,25 +503,25 @@ void create_tasks(task_info_t* graphic_task_info,
 
 	// Creating graphic task
 	task_info_init(graphic_task_info, MAX_AIRPLANE, 
-		GRAPHIC_PERIOD_MS, GRAPHIC_PERIOD_MS, PRIORITY);
+		GRAPHIC_PERIOD_MS, GRAPHIC_PERIOD_MS, GRAPHIC_PRIORITY);
 	err = task_create(graphic_task_info, graphic_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "graphic task", err);
 
 	// Creating input task
 	task_info_init(input_task_info, MAX_AIRPLANE + 1, 
-		INPUT_PERIOD_MS, INPUT_PERIOD_MS, PRIORITY);
+		INPUT_PERIOD_MS, INPUT_PERIOD_MS, INPUT_PRIORITY);
 	err = task_create(input_task_info, input_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "input task", err);
 
 	// Creating traffic controller task
 	task_info_init(traffic_ctrl_task_info, MAX_AIRPLANE + 2, 
-		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, PRIORITY + 1);
+		TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PERIOD_MS, TRAFFIC_CTRL_PRIORITY);
 	err = task_create(traffic_ctrl_task_info, traffic_controller_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "traffic controller task", err);
 
 	// Creating random generation task
 	task_info_init(random_gen_task_info, MAX_AIRPLANE + 3,
-		RANDOM_GEN_PERIOD_MS, RANDOM_GEN_PERIOD_MS, PRIORITY + 2);
+		RANDOM_GEN_PERIOD_MS, RANDOM_GEN_PERIOD_MS, RANDOM_GEN_PRIORITY);
 	err = task_create(random_gen_task_info, random_gen_task);
 	if (err) fprintf(stderr, ERR_MSG_TASK_CREATE, "random generation task", err);
 }
@@ -630,7 +630,7 @@ void run_new_airplane(shared_airplane_t* airplane) {
 
 	// Creating and running a new task
 	task_info_init(&airplane_task_infos[airplane_id], airplane_id, 
-		AIRPLANE_PERIOD_MS, AIRPLANE_PERIOD_MS, PRIORITY - 1);
+		AIRPLANE_PERIOD_MS, AIRPLANE_PERIOD_MS, AIRPLANE_PRIORITY);
 	airplane_task_infos[airplane_id].arg = airplane;
 
 	err = task_create(&airplane_task_infos[airplane_id], airplane_task);
